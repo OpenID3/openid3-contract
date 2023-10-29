@@ -5,7 +5,7 @@ pragma solidity ^0.8.20;
 import "@account-abstraction/contracts/samples/SimpleAccount.sol";
 import "../interfaces/IAccountInitializer.sol";
 import "../interface/IAccountAdmin.sol";
-import "./PasskeyAdminManager.sol";
+import "./admin/PasskeyAdminManager.sol";
 
 library AccountAdminStorage {
     bytes32 internal constant STORAGE_SLOT =
@@ -23,11 +23,11 @@ library AccountAdminStorage {
     }
 }
 
-contract OpenId3Account is SimpleAccount, IAccountInitializer {
+contract OpenId3Account is IAccountInitializer, SimpleAccount {
     using Address for address;
 
     error NotAuthorized();
-    error InvalidSignType(uint8 signType);
+    error InvalidMode(uint8 mode);
     error InvalidAdminAction(uint8 action);
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
@@ -58,16 +58,16 @@ contract OpenId3Account is SimpleAccount, IAccountInitializer {
 
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
     internal override virtual returns (uint256 validationData) {
-        uint8 signType = uint8(userOp.signature[0]);
-        if (signType == 0x00) { // admin mode
-            return IAccountAdmin(admin).validate(userOpHash, userOp.signature[1:])
+        uint8 mode = uint8(userOp.signature[0]);
+        if (mode == 0x00) { // admin mode
+            return IAccountAdmin(admin).validate(userOpHash, userOpSignature[1:])
                 ? 0 : SIG_VALIDATION_FAILED;
-        } else if (signType == 0x02) { // operator mode
+        } else if (mode == 0x01) { // operator mode
             bytes32 hash = userOpHash.toEthSignedMessageHash();
-            return owner != hash.recover(userOp.signature[1:])
-                ? SIG_VALIDATION_FAILED : 0;
+            return owner == hash.recover(userOp.signature[1:])
+                ? 0 : SIG_VALIDATION_FAILED;
         } else {
-            revert InvalidSignType(signType);
+            revert InvalidMode(signType);
         }
     }
 
@@ -86,7 +86,7 @@ contract OpenId3Account is SimpleAccount, IAccountInitializer {
             _call(newAdmin, 0, data);
         }
         address oldAdmin = AccountAdminStorage.layout().admin;
-        AccountAdminStorage.layout().admin = newAdmin;
+        AccountAdminStorage.layout() = AccountAdminStorage.Layout(newAdmin, true);
         emit NewAdmin(oldAdmin, newAdmin);
     }
 
