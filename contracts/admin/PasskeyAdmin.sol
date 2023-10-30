@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import "./PasskeyVerificationLib.sol";
+import "./Secp256r1Verifier.sol";
 
 contract PasskeyAdmin is IERC1271 {
     error AlreadyInitialized(address account);
@@ -66,7 +66,7 @@ contract PasskeyAdmin is IERC1271 {
         );
         bytes32 clientHash = sha256(bytes(clientDataJSON));
         bytes32 message = sha256(bytes.concat(data.authenticatorData, clientHash));
-        if (Secp256r1.verify(data.pubKey, data.r, data.s, uint256(message))) {
+        if (Secp256r1Verifier.verify(data.pubKey, data.r, data.s, uint256(message))) {
             return 0x1626ba7e; // magic value for ERC1271
         } else {
             return bytes4(0);
