@@ -3,9 +3,10 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@account-abstraction/contracts/samples/SimpleAccount.sol";
 import "../interfaces/IAccountInitializer.sol";
-import "../interfaces/IAccountAdmin.sol";
 
 library AccountAdminStorage {
     bytes32 internal constant STORAGE_SLOT =
@@ -62,15 +63,24 @@ contract OpenId3Account is IAccountInitializer, SimpleAccount {
         address admin = AccountAdminStorage.layout().admin;
         uint8 mode = uint8(userOp.signature[0]);
         if (mode == 0x00) { // admin mode
-            return IAccountAdmin(admin).validate(userOpHash, userOp.signature[1:])
-                ? 0 : SIG_VALIDATION_FAILED;
+            return _validateSignature(admin, userOpHash, userOp.signature[1:]);
         } else if (mode == 0x01) { // operator mode
-            bytes32 hash = userOpHash.toEthSignedMessageHash();
-            return owner == hash.recover(userOp.signature[1:])
-                ? 0 : SIG_VALIDATION_FAILED;
+            return _validateSignature(owner, userOpHash, userOp.signature[1:]);
         } else {
             revert InvalidMode(mode);
         }
+    }
+
+    function _validateSignature(
+        address signer,
+        bytes32 userOpHash,
+        bytes calldata signature
+    ) internal view returns(uint256) {
+        return SignatureChecker.isValidSignatureNow(
+            signer,
+            userOpHash,
+            signature
+        ) ? 0 : SIG_VALIDATION_FAILED;
     }
 
     /** UUPSUpgradeable */

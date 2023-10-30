@@ -3,10 +3,10 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "../interfaces/IAccountAdmin.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "./PasskeyVerificationLib.sol";
 
-contract PasskeyAdmin is IAccountAdmin {
+contract PasskeyAdmin is IERC1271 {
     error AlreadyInitialized(address account);
     error Unauthorized();
 
@@ -47,15 +47,15 @@ contract PasskeyAdmin is IAccountAdmin {
         _setPasskey(msg.sender, keyId, credentialId, pubKey);
     }
 
-    function validate(
+    function isValidSignature(
         bytes32 challenge,
         bytes calldata validationData
-    ) public view override returns(bool) {
+    ) public view override returns(bytes4) {
         PasskeyValidationData memory data
             = abi.decode(validationData, (PasskeyValidationData));
         bytes32 keyId = keccak256(abi.encode(data.credentialId, data.pubKey));
         if (keyId != _passkeys[msg.sender].keyId) {
-            return false;
+            return bytes4(0);
         }
         string memory opHashBase64 = Base64.encode(bytes.concat(challenge));
         string memory clientDataJSON = string.concat(
@@ -65,7 +65,11 @@ contract PasskeyAdmin is IAccountAdmin {
         );
         bytes32 clientHash = sha256(bytes(clientDataJSON));
         bytes32 message = sha256(bytes.concat(data.authenticatorData, clientHash));
-        return Secp256r1.verify(data.pubKey, data.r, data.s, uint256(message));
+        if (Secp256r1.verify(data.pubKey, data.r, data.s, uint256(message))) {
+            return 0x1626ba7e; // magic value for ERC1271
+        } else {
+            return bytes4(0);
+        }
     }
 
     function resetPasskey(
@@ -78,7 +82,7 @@ contract PasskeyAdmin is IAccountAdmin {
         bytes32 challenge = keccak256(abi.encode(
             block.chainid, address(this), account, newKeyId, credentialId
         ));
-        if (!validate(challenge, validationData)) {
+        if (isValidSignature(challenge, validationData) != 0x1626ba7e) {
            revert Unauthorized();
         }
         _setPasskey(account, newKeyId, credentialId, pubKey);
