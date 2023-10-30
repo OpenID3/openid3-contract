@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Upgrade.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "../interfaces/IAccountProxy.sol";
 
@@ -10,7 +10,7 @@ import "../interfaces/IAccountProxy.sol";
  * ignore the receive function warning since it
  * should be defined in implementation
  */
-contract AccountProxy is IAccountProxy, Proxy {
+contract AccountProxy is IAccountProxy, Proxy, ERC1967Upgrade {
     error AlreadyInitiated();
 
     /** We name is initProxy to specify it's for proxy not the implementation */
@@ -18,10 +18,10 @@ contract AccountProxy is IAccountProxy, Proxy {
         if (_implementation() != address(0)) {
             revert AlreadyInitiated();
         }
-        ERC1967Utils.upgradeToAndCall(logic, data);
+        _upgradeToAndCall(logic, data, false);
     }
 
     function _implementation() internal view override returns (address) {
-        return ERC1967Utils.getImplementation();
+        return ERC1967Upgrade._getImplementation();
     }
 }

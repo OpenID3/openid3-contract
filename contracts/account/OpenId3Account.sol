@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/contracts/samples/SimpleAccount.sol";
 import "../interfaces/IAccountInitializer.sol";
-import "../interface/IAccountAdmin.sol";
-import "./admin/PasskeyAdminManager.sol";
+import "../interfaces/IAccountAdmin.sol";
 
 library AccountAdminStorage {
     bytes32 internal constant STORAGE_SLOT =
@@ -25,6 +25,7 @@ library AccountAdminStorage {
 
 contract OpenId3Account is IAccountInitializer, SimpleAccount {
     using Address for address;
+    using ECDSA for bytes32;
 
     error NotAuthorized();
     error InvalidMode(uint8 mode);
@@ -46,7 +47,7 @@ contract OpenId3Account is IAccountInitializer, SimpleAccount {
 
     function initialize(
         bytes calldata adminData,
-        address anOwner,
+        address anOwner
     ) public override virtual initializer {
         _setAdmin(adminData);
         _setOwner(anOwner);
@@ -58,16 +59,17 @@ contract OpenId3Account is IAccountInitializer, SimpleAccount {
 
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
     internal override virtual returns (uint256 validationData) {
+        address admin = AccountAdminStorage.layout().admin;
         uint8 mode = uint8(userOp.signature[0]);
         if (mode == 0x00) { // admin mode
-            return IAccountAdmin(admin).validate(userOpHash, userOpSignature[1:])
+            return IAccountAdmin(admin).validate(userOpHash, userOp.signature[1:])
                 ? 0 : SIG_VALIDATION_FAILED;
         } else if (mode == 0x01) { // operator mode
             bytes32 hash = userOpHash.toEthSignedMessageHash();
             return owner == hash.recover(userOp.signature[1:])
                 ? 0 : SIG_VALIDATION_FAILED;
         } else {
-            revert InvalidMode(signType);
+            revert InvalidMode(mode);
         }
     }
 
@@ -80,13 +82,13 @@ contract OpenId3Account is IAccountInitializer, SimpleAccount {
     /* help functions */
 
     function _setAdmin(bytes calldata adminData) internal {
-        address newAdmin = adminData[0:20];
+        address newAdmin = address(bytes20(adminData[0:20]));
         bytes memory data = adminData[20:];
         if (data.length > 0) {
             _call(newAdmin, 0, data);
         }
         address oldAdmin = AccountAdminStorage.layout().admin;
-        AccountAdminStorage.layout() = AccountAdminStorage.Layout(newAdmin, true);
+        AccountAdminStorage.layout().admin = newAdmin;
         emit NewAdmin(oldAdmin, newAdmin);
     }
 

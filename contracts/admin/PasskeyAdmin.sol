@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "../interfaces/IAccountAdmin.sol";
 import "./PasskeyVerificationLib.sol";
 
-contract PasskeyAdminManager is IAccountAdmin {
+contract PasskeyAdmin is IAccountAdmin {
     error AlreadyInitialized(address account);
     error Unauthorized();
 

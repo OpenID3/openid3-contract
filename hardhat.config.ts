@@ -18,11 +18,20 @@ const accounts = process.env.HARDHAT_DEPLOYER ?
   ];
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      viaIR: true,
+      optimizer: {
+        enabled: true,
+        runs: 1,
+      },
+    },
+  },
   networks: {
     sepolia: {
       chainId: 11155111,
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      url: "https://ethereum-sepolia.publicnode.com",
       accounts,
     },
   },
