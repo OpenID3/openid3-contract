@@ -10,50 +10,30 @@ import "../interfaces/IAccountProxy.sol";
 contract AccountFactory {
     event AccountDeployed(address account);
 
-    address private immutable ACCOUNT_PROXY;
-    address private immutable ACCOUNT_IMPL;
+    address public immutable accountProxy;
+    address public immutable accountImpl;
 
-    constructor(address accountProxy, address accountImpl) {
-        ACCOUNT_PROXY = accountProxy;
-        ACCOUNT_IMPL = accountImpl;
-    }
-
-    function getAccountImpl() external view returns (address) {
-        return ACCOUNT_IMPL;
-    }
-
-    function getAccountProxy() external view returns (address) {
-        return ACCOUNT_PROXY;
+    constructor(address _accountProxy, address _accountImpl) {
+        accountProxy = _accountProxy;
+        accountImpl = _accountImpl;
     }
 
     function clone(
-        bytes memory adminData,
-        address owner
+        bytes memory accountData
     ) external returns (address proxy) {
-        bytes32 salt = keccak256(abi.encodePacked(owner, adminData));
-        proxy = Clones.cloneDeterministic(ACCOUNT_PROXY, salt);
-        bytes memory accountInitData = abi.encodeWithSelector(
-            IAccountInitializer.initialize.selector,
-            adminData,
-            owner
-        );
-        IAccountProxy(proxy).initProxy(ACCOUNT_IMPL, accountInitData);
+        bytes32 salt = keccak256(accountData);
+        proxy = Clones.cloneDeterministic(accountProxy, salt);
+        IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);
     }
 
     function deploy(
-        bytes memory adminData,
-        address owner
+        bytes memory accountData
     ) external returns (address proxy) {
-        bytes32 salt = keccak256(abi.encodePacked(owner, adminData));
-        bytes memory accountInitData = abi.encodeWithSelector(
-            IAccountInitializer.initialize.selector,
-            adminData,
-            owner
-        );
+        bytes32 salt = keccak256(accountData);
         bytes memory deploymentData = abi.encodePacked(
             type(ERC1967Proxy).creationCode,
-            abi.encode(ACCOUNT_IMPL, accountInitData)
+            abi.encode(accountImpl, accountData)
         );
         assembly ("memory-safe") {
             proxy := create2(0x0, add(deploymentData, 0x20), mload(deploymentData), salt)
