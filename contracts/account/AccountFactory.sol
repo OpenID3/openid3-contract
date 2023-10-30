@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../interfaces/IAccountInitializer.sol";
 import "../interfaces/IAccountProxy.sol";
 
-contract AccountDeployer {
+contract AccountFactory {
     event AccountDeployed(address account);
 
     address private immutable ACCOUNT_PROXY;
@@ -30,7 +30,7 @@ contract AccountDeployer {
         bytes memory adminData,
         address owner
     ) external returns (address proxy) {
-        bytes32 salt = keccak256(adminData);
+        bytes32 salt = keccak256(abi.encodePacked(owner, adminData));
         proxy = Clones.cloneDeterministic(ACCOUNT_PROXY, salt);
         bytes memory accountInitData = abi.encodeWithSelector(
             IAccountInitializer.initialize.selector,
@@ -45,7 +45,7 @@ contract AccountDeployer {
         bytes memory adminData,
         address owner
     ) external returns (address proxy) {
-        bytes32 salt = keccak256(adminData);
+        bytes32 salt = keccak256(abi.encodePacked(owner, adminData));
         bytes memory accountInitData = abi.encodeWithSelector(
             IAccountInitializer.initialize.selector,
             adminData,
