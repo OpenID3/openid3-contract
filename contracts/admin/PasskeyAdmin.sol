@@ -44,7 +44,8 @@ contract PasskeyAdmin is IERC1271 {
         if (_passkeys[msg.sender].keyId != bytes32(0)) {
             revert AlreadyInitialized(msg.sender);
         }
-        _setPasskey(msg.sender, keyId, credentialId, pubKey);
+        _passkeys[msg.sender].keyId = keyId;
+        emit PasskeySet(msg.sender, keyId, credentialId, pubKey);
     }
 
     function isValidSignature(
@@ -70,31 +71,5 @@ contract PasskeyAdmin is IERC1271 {
         } else {
             return bytes4(0);
         }
-    }
-
-    function resetPasskey(
-        address account,
-        string calldata credentialId,
-        Passkey calldata pubKey,
-        bytes calldata validationData
-    ) external {
-        bytes32 newKeyId = keccak256(abi.encode(credentialId, pubKey));
-        bytes32 challenge = keccak256(abi.encode(
-            block.chainid, address(this), account, newKeyId, credentialId
-        ));
-        if (isValidSignature(challenge, validationData) != 0x1626ba7e) {
-           revert Unauthorized();
-        }
-        _setPasskey(account, newKeyId, credentialId, pubKey);
-    }
-
-    function _setPasskey(
-        address account,
-        bytes32 keyId,
-        string calldata credentialId,
-        Passkey calldata pubKey
-    ) internal {
-        _passkeys[account].keyId = keyId;
-        emit PasskeySet(account, keyId, credentialId, pubKey);
     }
 }
