@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.20;
 
-interface IAccountInitializer {
+interface IOpenId3Account {
+    function getMode() external view returns(uint8);
+
     function initialize(
         bytes calldata adminData,
         address owner

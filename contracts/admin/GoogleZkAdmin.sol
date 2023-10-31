@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
 import "./RsaVerifier.sol";
+import "../interfaces/IOpenId3Account.sol";
 
 contract GoogleZkAdmin is IERC1271 {
     event AccountLinked(address indexed account, bytes32 indexed idHash);
@@ -51,16 +52,16 @@ contract GoogleZkAdmin is IERC1271 {
         plonkVerifier = IPlonkVerifier(_plonkVerifier);
     }
 
-    function initialize(bytes32 idHash) external {
-        if (_accounts[msg.sender].idHash != bytes32(0)) {
-            revert AlreadyInitialized(msg.sender);
+    function linkAccount(bytes32 idHash) external {
+        if (IOpenId3Account(msg.sender).getMode() != 0x00) {
+            revert Unauthorized();
         }
         _accounts[msg.sender].idHash = idHash;
         emit AccountLinked(msg.sender, idHash);
     }
 
     function isValidSignature(
-        bytes32 challenge,
+        bytes32 /* challenge */,
         bytes calldata validationData
     ) public view override returns(bytes4) {
         (GoogleZkValidationData memory data) = abi.decode(validationData, (GoogleZkValidationData));
