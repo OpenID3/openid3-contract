@@ -5,11 +5,9 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "./Secp256r1Verifier.sol";
-import "../interfaces/IOpenId3Account.sol";
+import "./AccountAdminBase.sol";
 
-contract PasskeyAdmin is IERC1271 {
-    error Unauthorized();
-
+contract PasskeyAdmin is IERC1271, AccountAdminBase {
     event PasskeySet(
         address indexed account,
         bytes32 indexed keyId,
@@ -39,10 +37,7 @@ contract PasskeyAdmin is IERC1271 {
     function setPasskey(
         string calldata credentialId,
         Passkey calldata pubKey
-    ) external {
-        if (IOpenId3Account(msg.sender).getMode() != 0x00) {
-            revert Unauthorized();
-        }
+    ) external onlyAdminMode {
         bytes32 keyId = keccak256(abi.encode(credentialId, pubKey));
         _passkeys[msg.sender].keyId = keyId;
         emit PasskeySet(msg.sender, keyId, credentialId, pubKey);

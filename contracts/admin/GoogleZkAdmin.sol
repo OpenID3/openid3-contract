@@ -7,13 +7,11 @@ import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
 import "./RsaVerifier.sol";
-import "../interfaces/IOpenId3Account.sol";
+import "./AccountAdminBase.sol";
 
-contract GoogleZkAdmin is IERC1271 {
+contract GoogleZkAdmin is IERC1271, AccountAdminBase {
     event AccountLinked(address indexed account, bytes32 indexed idHash);
 
-    error AlreadyInitialized(address account);
-    error Unauthorized();
     error InvalidRsaKey(string key, bytes32 keyId);
 
     // Google RSA PubKey: https://www.googleapis.com/oauth2/v3/certs
@@ -52,10 +50,7 @@ contract GoogleZkAdmin is IERC1271 {
         plonkVerifier = IPlonkVerifier(_plonkVerifier);
     }
 
-    function linkAccount(bytes32 idHash) external {
-        if (IOpenId3Account(msg.sender).getMode() != 0x00) {
-            revert Unauthorized();
-        }
+    function linkAccount(bytes32 idHash) external onlyAdminMode {
         _accounts[msg.sender].idHash = idHash;
         emit AccountLinked(msg.sender, idHash);
     }

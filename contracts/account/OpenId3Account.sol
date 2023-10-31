@@ -41,20 +41,12 @@ contract OpenId3Account is
     using Address for address;
     using ECDSA for bytes32;
 
-    error NotSelfCall();
     error OnlyAdminAllowed();
     error NotAuthorized();
     error InvalidMode(uint8 mode);
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
     event NewOwner(address indexed oldOwner, address indexed newOwner);
-
-    modifier onlySelf() {
-        if (msg.sender != address(this)) {
-            revert NotSelfCall();
-        }
-        _;
-    }
 
     IEntryPoint private immutable _entryPoint;
 
@@ -155,7 +147,7 @@ contract OpenId3Account is
         address payable withdrawAddress,
         uint256 amount
     ) external {
-        _guard(true);
+        _guard(false);
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
