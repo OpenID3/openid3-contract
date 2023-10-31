@@ -1,6 +1,6 @@
 {
-    "accountFactory": "0x1C3505EEb1eE5Da89eabb1a743c3399faf14aD86",
-    "accountImpl": "0xE44d62310d1919D8a213C61383691818cea1ca8a",
+    "accountFactory": "0xa06a12d635aFf846cBC223087d8Dc63094300fC8",
+    "accountImpl": "0x480dF9A540628f7036cd8EcCD42Ab0C4534Ceef6",
     "accountProxy": "0x7CB55518ad352E220882935E419F7Fd3cA68B21A",
     "passkeyAdmin": "0x3f21874809a857cDc79c48a661dBf2c44f99C3F8"
 }
