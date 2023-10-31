@@ -39,20 +39,22 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
         PlonkZkProof zkProof;
     }
 
-    struct GoogleOAuthStorage {
-        bytes32 idHash; // hash of account id
-    }
-
     IPlonkVerifier immutable public plonkVerifier;
-    mapping(address => GoogleOAuthStorage) private _accounts;
+    mapping(address => bytes32) private _accounts;
 
     constructor(address _plonkVerifier) {
         plonkVerifier = IPlonkVerifier(_plonkVerifier);
     }
 
     function linkAccount(bytes32 idHash) external onlyAdminMode {
-        _accounts[msg.sender].idHash = idHash;
+        _accounts[msg.sender] = idHash;
         emit AccountLinked(msg.sender, idHash);
+    }
+
+    function getLinkedAccountHash(
+        address account
+    ) external view returns(bytes32) {
+        return _accounts[account];
     }
 
     function isValidSignature(

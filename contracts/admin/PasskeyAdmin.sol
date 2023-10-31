@@ -21,26 +21,25 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
         string clientDataJsonPre;
         string clientDataJsonPost;
         // public key
-        string credentialId;
         Passkey pubKey;
         // signature
         uint256 r;
         uint256 s;
     }
 
-    struct PasskeyStorage {
-        bytes32 keyId; // unique identifier for the passkey
-    }
-
-    mapping(address => PasskeyStorage) private _passkeys;
+    mapping(address => bytes32) private _passkeys;
 
     function setPasskey(
         string calldata credentialId,
         Passkey calldata pubKey
     ) external onlyAdminMode {
-        bytes32 keyId = keccak256(abi.encode(credentialId, pubKey));
-        _passkeys[msg.sender].keyId = keyId;
+        bytes32 keyId = _genKeyId(pubKey);
+        _passkeys[msg.sender] = keyId;
         emit PasskeySet(msg.sender, keyId, credentialId, pubKey);
+    }
+
+    function getPasskeyId(address account) external view returns(bytes32) {
+        return _passkeys[account];
     }
 
     function isValidSignature(
@@ -49,8 +48,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
     ) public view override returns(bytes4) {
         PasskeyValidationData memory data
             = abi.decode(validationData, (PasskeyValidationData));
-        bytes32 keyId = keccak256(abi.encode(data.credentialId, data.pubKey));
-        if (keyId != _passkeys[msg.sender].keyId) {
+        if (_genKeyId(data.pubKey) != _passkeys[msg.sender]) {
             return bytes4(0);
         }
         string memory opHashBase64 = Base64.encode(bytes.concat(challenge));
@@ -66,5 +64,9 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
         } else {
             return bytes4(0);
         }
+    }
+
+    function _genKeyId(Passkey memory key) internal pure returns(bytes32) {
+        return keccak256(abi.encodePacked(key.pubKeyX, key.pubKeyY));
     }
 }
