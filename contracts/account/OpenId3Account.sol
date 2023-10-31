@@ -194,26 +194,24 @@ contract OpenId3Account is
     // We allow only four external callers:
     // 1. entryPoint: In this case, we don't need to update the mode
     //    since it's already set by the _validateSignature, but we
-    //    need to check the mode to ensure only admin is allowed
-    //    if onlyAdminAllowed is true
+    //    need to check if only admin is allowed
     // 2. address(this): In this case, we don't need to update the mode
     //    since it's already set by the initial entry point call, but we
-    //    need to check the mode to ensure only admin is allowed
-    //    if onlyAdminAllowed is true
+    //    need to check if only admin is allowed
     // 3. operator: In this case, we set the mode to operator mode and revert
     //    if only admin is allowed
     // 4. admin: In this case, we set the mode to admin mode
     //
-    // If onlyAdminAllowed is true, we only allow admin to call
-    function _guard(bool onlyAdminAllowed) internal {
+    // If onlyAdmin is true, we only allow admin to call
+    function _guard(bool onlyAdmin) internal {
         if (msg.sender == address(entryPoint()) || msg.sender == address(this)) {
-            if (onlyAdminAllowed && OpenId3AccountStorage.layout().mode != 0x00) {
+            if (onlyAdmin && OpenId3AccountStorage.layout().mode != 0x00) {
                 revert OnlyAdminAllowed();
             }
         } else if (msg.sender == OpenId3AccountStorage.layout().admin) {
             OpenId3AccountStorage.layout().mode = 0x00;
         } else if (msg.sender == OpenId3AccountStorage.layout().operator) {
-            if (onlyAdminAllowed) {
+            if (onlyAdmin) {
                 revert OnlyAdminAllowed();
             }
             OpenId3AccountStorage.layout().mode = 0x01;
