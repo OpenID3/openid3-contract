@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import "./Secp256r1Verifier.sol";
+import "../lib/Secp256r1Verifier.sol";
 import "./AccountAdminBase.sol";
 
 contract PasskeyAdmin is IERC1271, AccountAdminBase {

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
-import "./RsaVerifier.sol";
+import "../lib/RsaVerifier.sol";
 import "./AccountAdminBase.sol";
 
 contract GoogleZkAdmin is IERC1271, AccountAdminBase {

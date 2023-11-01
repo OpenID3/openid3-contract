@@ -1,10 +1,7 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import { deterministicDeploy, genBytecode, getEntryPointAddress } from "../lib/deployer";
-
-const getArtifact = async(hre: HardhatRuntimeEnvironment, contract: string) => {
-    return await hre.artifacts.readArtifact(contract);
-}
+import { getArtifact } from "../lib/utils";
 
 const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     const proxy = await deterministicDeploy(
