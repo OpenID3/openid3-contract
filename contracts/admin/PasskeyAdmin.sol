@@ -17,7 +17,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
 
     struct PasskeyValidationData {
         // signed data
-        bytes authenticatorData;
+        bytes authData;
         string clientDataJsonPre;
         string clientDataJsonPost;
         // public key
@@ -58,7 +58,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
             data.clientDataJsonPost
         );
         bytes32 clientHash = sha256(bytes(clientDataJSON));
-        bytes32 message = sha256(bytes.concat(data.authenticatorData, clientHash));
+        bytes32 message = sha256(bytes.concat(data.authData, clientHash));
         if (Secp256r1Verifier.verify(data.pubKey, data.r, data.s, uint256(message))) {
             return 0x1626ba7e; // magic value for ERC1271
         } else {

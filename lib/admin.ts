@@ -1,31 +1,31 @@
 import crypto from "crypto";
-import * as secp from "@lionello/secp256k1-js";
 import { Contract, ethers } from "ethers";
 import { callWithEntryPoint, genUserOp, genUserOpHash } from "./userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { secp256r1 } from "@noble/curves/p256";
 
 export interface Passkey {
     privKey: Uint8Array,
-    pubKeyX: string;
-    pubKeyY: string;
+    pubKey: Uint8Array,
+    pubKeyX: bigint;
+    pubKeyY: bigint;
 }
 
 export const genPasskey = () : Passkey => {
-    const privKeyBuf = crypto.randomBytes(32);
-    const privKey = secp.uint256(privKeyBuf, 16);
-    const pubKey = secp.generatePublicKeyFromPrivateKeyData(privKey);
-    const pubKeyX = secp.uint256(pubKey.x, 16).toString();
-    const pubKeyY = secp.uint256(pubKey.y, 16).toString();
-    return { privKey, pubKeyX, pubKeyY };
+    const privKey = secp256r1.utils.randomPrivateKey();
+    const pubKey = secp256r1.getPublicKey(privKey);
+    const point = secp256r1.ProjectivePoint.fromPrivateKey(privKey);
+    return { privKey, pubKey, pubKeyX: point.x, pubKeyY: point.y };
 }
 
 export const buildAdminData = (
     admin: Contract,
-    key: Passkey
+    key: Passkey,
+    keyId: string,
   ) => {
     let adminData = admin.interface.encodeFunctionData(
       "setPasskey", [
-        "mypasskey",
+        keyId,
         {pubKeyX: key.pubKeyX, pubKeyY: key.pubKeyY}
       ]
     );
@@ -37,29 +37,39 @@ export function buildAdminValidationData(
     key: Passkey,
     userOpHash: string,
 ) {
-    const authData = ethers.getBytes(ethers.solidityPacked(
+    const authData = ethers.solidityPacked(
         ["uint256", "uint256", "uint256"],
         [key.pubKeyX, key.pubKeyY, 0]
-    ));
+    );
+    const challenge = ethers.encodeBase64(userOpHash);
     const clientJson = JSON.stringify({
-        "preField": "preValue",
-        "challenge": userOpHash,
-        "postField": "postValue",
+        preField: "preValue",
+        challenge: challenge,
+        postField: "postValue",
     });
-    const [clientDataJsonPre, clientDataJsonPost] = clientJson.split(userOpHash);
+    const [
+        clientDataJsonPre,
+        clientDataJsonPost
+    ] = clientJson.split(challenge);
     const clientDataHash = crypto.createHash("sha256")
         .update(clientJson)
         .digest("hex");
-    const clientData = ethers.getBytes(clientDataHash);
-    const signedData = [...authData, ...clientData];
-    const signature = secp.ecsign(key.privKey, signedData);
+    const signedDataHex = ethers.solidityPacked(
+        ["bytes", "bytes32"],
+        [authData, "0x" + clientDataHash]
+    );
+    const signedDataHash = crypto.createHash("sha256")
+        .update(ethers.getBytes(signedDataHex))
+        .digest("hex");
+    const signature = secp256r1.sign(signedDataHash, key.privKey);
     return {
-        r: signature.r, // hex
-        s: signature.s, // hex
+        r: signature.r, // bigint
+        s: signature.s, // bigint
         clientDataJsonPre,
         clientDataJsonPost,
         authData,
-    }
+        clientDataHash,
+    };
 }
 
 export async function callAsAdmin(
@@ -74,15 +84,15 @@ export async function callAsAdmin(
     const userOpHash = await genUserOpHash(userOp);
     const validationData = buildAdminValidationData(key, userOpHash);
     const signature = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["bytes", "string", "string", "tuple(uint256, uint256)", "uint256", "uint256"],
-        [
+        ["tuple(bytes, string, string, tuple(uint256, uint256), uint256, uint256)"],
+        [[
             validationData.authData,
             validationData.clientDataJsonPre,
             validationData.clientDataJsonPost,
-            [validationData.r, validationData.s],
-            userOp.verificationGasLimit,
-            userOp.preVerificationGas,
-        ]
+            [key.pubKeyX, key.pubKeyY],
+            validationData.r,
+            validationData.s,
+        ]]
     );
     userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [0, signature]);
     return await callWithEntryPoint(userOp, signer, log ?? false);

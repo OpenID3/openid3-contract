@@ -170,8 +170,10 @@ contract OpenId3Account is
             _call(newAdmin, 0, adminData[20:]);
         }
         address oldAdmin = OpenId3AccountStorage.layout().admin;
-        OpenId3AccountStorage.layout().admin = newAdmin;
-        emit NewAdmin(oldAdmin, newAdmin);
+        if (oldAdmin != newAdmin) {
+            OpenId3AccountStorage.layout().admin = newAdmin;
+            emit NewAdmin(oldAdmin, newAdmin);
+        }
     }
 
     function _setOperator(address newOperator) internal {
