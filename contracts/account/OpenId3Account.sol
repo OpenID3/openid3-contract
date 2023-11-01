@@ -46,7 +46,7 @@ contract OpenId3Account is
     error InvalidMode(uint8 mode);
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
-    event NewOwner(address indexed oldOwner, address indexed newOwner);
+    event NewOperator(address indexed oldOwner, address indexed newOwner);
 
     IEntryPoint private immutable _entryPoint;
 
@@ -73,6 +73,14 @@ contract OpenId3Account is
 
     function getMode() external override view returns(uint8) {
         return OpenId3AccountStorage.layout().mode;
+    }
+
+    function getAdmin() external override view returns(address) {
+        return OpenId3AccountStorage.layout().admin;
+    }
+
+    function getOperator() external override view returns(address) {
+        return OpenId3AccountStorage.layout().operator;
     }
 
     // both operator and admin are allowed to update operator
@@ -166,7 +174,7 @@ contract OpenId3Account is
     function _setOperator(address newOperator) internal {
         address oldOperator = OpenId3AccountStorage.layout().operator;
         OpenId3AccountStorage.layout().operator = newOperator;
-        emit NewOwner(oldOperator, newOperator);
+        emit NewOperator(oldOperator, newOperator);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {

@@ -8,7 +8,6 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 
-
 const accounts = process.env.HARDHAT_DEPLOYER ?
   [process.env.HARDHAT_DEPLOYER] :
   [
@@ -43,10 +42,10 @@ const config: HardhatUserConfig = {
     deployer: {
       default: 0,
     },
-    validator: {
+    tester1: {
       default: 1,
     },
-    tester: {
+    tester2: {
       default: 2,
     },
   },
@@ -72,9 +71,8 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: 'types',
     target: 'ethers-v6',
-    alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
-    externalArtifacts: ['externalArtifacts/*.json'], // optional array of glob patterns with external artifacts to process (for example external libs from node_modules)
-    dontOverrideCompile: false // defaults to false
+    alwaysGenerateOverloads: false,
+    dontOverrideCompile: false
   },
 };
 
