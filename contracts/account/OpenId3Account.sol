@@ -13,6 +13,8 @@ import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol
 
 import "../interfaces/IOpenId3Account.sol";
 
+import "hardhat/console.sol";
+
 library OpenId3AccountStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256('openid3.account');
@@ -135,7 +137,8 @@ contract OpenId3Account is
             return _validateSignature(admin, userOpHash, userOp.signature[1:]);
         } else if (mode == 0x01) { // operator mode
             address operator = OpenId3AccountStorage.layout().operator;
-            return _validateSignature(operator, userOpHash, userOp.signature[1:]);
+            bytes32 message = userOpHash.toEthSignedMessageHash();
+            return _validateSignature(operator, message, userOp.signature[1:]);
         } else {
             revert InvalidMode(mode);
         }

@@ -7,42 +7,16 @@ import {
 import * as hre from "hardhat";
 import { AddressLike, Contract, Interface } from "ethers";
 import { getInterface } from "../lib/utils";
-import crypto from "crypto";
-import * as secp from "@lionello/secp256k1-js";
-import { type BN } from "bn.js";
 import { OpenId3Account__factory } from "../types";
-
-interface Passkey {
-  privKey: Uint8Array,
-  pubKeyX: typeof BN,
-  pubKeyY: typeof BN,
-}
-
-const genPasskey = () : Passkey => {
-  const privKeyBuf = crypto.randomBytes(32);
-  const privKey = secp.uint256(privKeyBuf, 16);
-  const pubKey = secp.generatePublicKeyFromPrivateKeyData(privKey);
-  const pubKeyX = secp.uint256(pubKey.x, 16)
-  const pubKeyY = secp.uint256(pubKey.y, 16)
-  return { privKey, pubKeyX, pubKeyY };
-}
-
-const buildAdminData = (
-  admin: Contract,
-  key: Passkey
-) => {
-  let adminData = admin.interface.encodeFunctionData(
-    "setPasskey", [
-      "mypasskey",
-      {
-        pubKeyX: key.pubKeyX.toString(),
-        pubKeyY: key.pubKeyY.toString()
-      }
-    ]
-  );
-  return hre.ethers.solidityPacked(
-    ["address", "bytes"], [admin.target, adminData])
-}
+import {
+  genPasskey,
+  buildAdminData,
+  callAsOperator,
+  type Passkey,
+  callAsAdmin,
+} from "../lib/admin";
+import { genInitCode } from "../lib/userop";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("OpenId3Account", function () {
     let entrypoint: Contract;
@@ -62,6 +36,14 @@ describe("OpenId3Account", function () {
       const deployed = await factory.predictClonedAddress(accountInitData);
       await factory.clone(accountInitData);
       return deployed;
+    }
+
+    const deposit = async(from: HardhatEthersSigner, to: AddressLike) => {
+      const tx1 = await from.sendTransaction({
+        to,
+        value: hre.ethers.parseEther("1.0")
+      });
+      await tx1.wait();
     }
   
     beforeEach(async function () {
@@ -91,7 +73,7 @@ describe("OpenId3Account", function () {
 
       const keyId = hre.ethers.solidityPackedKeccak256(
         ["uint256", "uint256"],
-        [passkey.pubKeyX.toString(), passkey.pubKeyY.toString()]
+        [passkey.pubKeyX, passkey.pubKeyY]
       );
       expect(await admin.getPasskeyId(deployed)).to.eq(keyId);
     });
@@ -114,7 +96,7 @@ describe("OpenId3Account", function () {
 
       const keyId = hre.ethers.solidityPackedKeccak256(
         ["uint256", "uint256"],
-        [passkey.pubKeyX.toString(), passkey.pubKeyY.toString()]
+        [passkey.pubKeyX, passkey.pubKeyY]
       );
       expect(await admin.getPasskeyId(cloned)).to.eq(keyId);
     });
@@ -134,5 +116,45 @@ describe("OpenId3Account", function () {
         account.setOperator(tester1.address)
       ).to.emit(account, "NewOperator").withArgs(deployer.address, tester1.address);
       expect(await account.getMode()).to.eq(1); // operator mode
+    });
+
+    it("should clone with eip4337", async function () {
+      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+      const adminData = buildAdminData(admin, passkey);
+      const accountInitData = accountIface.encodeFunctionData(
+        "initialize", [adminData, deployer.address]);
+      const account = await factory.predictClonedAddress(accountInitData);
+      const accountContract = OpenId3Account__factory.connect(account, tester1);
+      await deposit(deployer, account);
+
+      const initCode = await genInitCode(
+        await factory.getAddress(),
+        accountInitData
+      );
+
+      const newPasskey = genPasskey();
+      const newAdminData = buildAdminData(admin, newPasskey);
+      const setAdminData = accountIface.encodeFunctionData(
+        "setAdmin", [newAdminData]);
+
+      await expect(
+        callAsOperator(
+          account, deployer, initCode, setAdminData, tester1)
+      ).to.emit(entrypoint, "UserOperationRevertReason");
+      const keyId = hre.ethers.solidityPackedKeccak256(
+        ["uint256", "uint256"],
+        [passkey.pubKeyX, passkey.pubKeyY]
+      );
+      // passkey should not be updated
+      expect(await admin.getPasskeyId(account)).to.eq(keyId);
+
+      const setOperatorData = accountIface.encodeFunctionData(
+        "setOperator", [tester1.address]);
+      await expect(
+        callAsOperator(
+          account, deployer, "0x", setOperatorData, tester1)
+      ).to.emit(accountContract, "NewOperator").withArgs(
+        deployer.address, tester1.address);
+      expect(await accountContract.getOperator()).to.eq(tester1.address);
     });
 });
