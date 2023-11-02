@@ -13,8 +13,6 @@ import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol
 
 import "../interfaces/IOpenId3Account.sol";
 
-import "hardhat/console.sol";
-
 library OpenId3AccountStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256('openid3.account');
@@ -101,7 +99,7 @@ contract OpenId3Account is
 
     function _authorizeUpgrade(
         address /* newImplementation */
-    ) internal override  {
+    ) internal view override  {
         _guard(true);
     }
 
@@ -211,23 +209,13 @@ contract OpenId3Account is
     // 2. address(this): In this case, we don't need to update the mode
     //    since it's already set by the initial entry point call, but we
     //    need to check if only admin is allowed
-    // 3. operator: In this case, we set the mode to operator mode and revert
-    //    if only admin is allowed
-    // 4. admin: In this case, we set the mode to admin mode
     //
     // If onlyAdmin is true, we only allow admin to call
-    function _guard(bool onlyAdmin) internal {
+    function _guard(bool onlyAdmin) internal view {
         if (msg.sender == address(entryPoint()) || msg.sender == address(this)) {
             if (onlyAdmin && OpenId3AccountStorage.layout().mode != 0x00) {
                 revert OnlyAdminAllowed();
             }
-        } else if (msg.sender == OpenId3AccountStorage.layout().admin) {
-            OpenId3AccountStorage.layout().mode = 0x00;
-        } else if (msg.sender == OpenId3AccountStorage.layout().operator) {
-            if (onlyAdmin) {
-                revert OnlyAdminAllowed();
-            }
-            OpenId3AccountStorage.layout().mode = 0x01;
         } else {
             revert NotAuthorized();
         }

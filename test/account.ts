@@ -28,14 +28,15 @@ describe("OpenId3Account", function () {
     const deployAccount = async(
       admin: Contract,
       passkey: Passkey,
-      operator: AddressLike
     ) => {
+      const { deployer } = await hre.ethers.getNamedSigners();
       const adminData = buildAdminData(admin, passkey, "passkey1");
       const accountInitData = accountIface.encodeFunctionData(
-        "initialize", [adminData, operator]);
-      const deployed = await factory.predictClonedAddress(accountInitData);
+        "initialize", [adminData, deployer.address]);
+      const cloned = await factory.predictClonedAddress(accountInitData);
+      await deposit(deployer, cloned);
       await factory.clone(accountInitData);
-      return deployed;
+      return OpenId3Account__factory.connect(cloned, deployer);
     }
 
     const deposit = async(from: HardhatEthersSigner, to: AddressLike) => {
@@ -101,24 +102,7 @@ describe("OpenId3Account", function () {
       expect(await admin.getPasskeyId(cloned)).to.eq(keyId);
     });
 
-    it("should reset operator", async function () {
-      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
-      const accountAddr = await deployAccount(admin, passkey, deployer.address);
-
-      let account = OpenId3Account__factory.connect(accountAddr, tester1);
-      await expect(
-        account.setOperator(tester1.address)
-      ).to.be.revertedWithCustomError(account, "NotAuthorized");
-    
-      account = OpenId3Account__factory.connect(accountAddr, deployer);
-      expect(await account.getMode()).to.eq(0); // admin mode
-      await expect(
-        account.setOperator(tester1.address)
-      ).to.emit(account, "NewOperator").withArgs(deployer.address, tester1.address);
-      expect(await account.getMode()).to.eq(1); // operator mode
-    });
-
-    it("should clone with eip4337", async function () {
+    it("should clone via eip4337 with eth transfer", async function () {
       const { deployer, tester1 } = await hre.ethers.getNamedSigners();
       const adminData = buildAdminData(admin, passkey, "passkey1");
       const accountInitData = accountIface.encodeFunctionData(
@@ -132,39 +116,198 @@ describe("OpenId3Account", function () {
         accountInitData
       );
 
-      const passkey2 = genPasskey();
-      const newAdminData = buildAdminData(admin, passkey2, "passkey2");
-      const setAdminData = accountIface.encodeFunctionData(
-        "setAdmin", [newAdminData]);
-
+      // transfer eth
+      const setOperatorData = accountIface.encodeFunctionData(
+        "execute", [tester1.address, 0, "0x"]);
       await expect(
         callAsOperator(
-          account, deployer, initCode, setAdminData, tester1)
-      ).to.emit(entrypoint, "UserOperationRevertReason");
-      const keyId = hre.ethers.solidityPackedKeccak256(
-        ["uint256", "uint256"],
-        [passkey.pubKeyX, passkey.pubKeyY]
-      );
-      // passkey should not be updated
-      expect(await admin.getPasskeyId(account)).to.eq(keyId);
+          account, deployer, initCode, setOperatorData, tester1)
+      ).to.emit(factory, "AccountDeployed").withArgs(account)
+      .to.emit(accountContract, "NewOperator").withArgs(
+        hre.ethers.ZeroAddress, deployer.address)
+      .to.emit(accountContract, "NewAdmin").withArgs(
+        hre.ethers.ZeroAddress, await admin.getAddress());
+    });
 
-      const setOperatorData = accountIface.encodeFunctionData(
+    it("should reset operator properly", async function () {
+      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+      const account = await deployAccount(admin, passkey);
+      expect(await account.getMode()).to.eq(0); // admin mode
+      expect(await account.getOperator()).to.eq(deployer.address);
+
+      // tester cannot set operator since it's neither operator nor admin
+      await expect(
+        account.connect(tester1).setOperator(tester1.address)
+      ).to.be.revertedWithCustomError(account, "NotAuthorized");
+      expect(await account.getMode()).to.eq(0); // admin mode
+      // operator should not be updated
+      expect(await account.getOperator()).to.eq(deployer.address);
+
+      // operator can not set operator directly
+      await expect(
+        account.connect(deployer).setOperator(tester1.address)
+      ).to.be.revertedWithCustomError(account, "NotAuthorized");
+      expect(await account.getMode()).to.eq(0); // admin mode
+      expect(await account.getOperator()).to.eq(deployer.address);
+
+      // now deployer is operator, let's set it tester1 via EIP-4337
+      const accountAddr = await account.getAddress();
+      const setOperatorData1 = accountIface.encodeFunctionData(
         "setOperator", [tester1.address]);
       await expect(
         callAsOperator(
-          account, deployer, "0x", setOperatorData, tester1)
-      ).to.emit(accountContract, "NewOperator").withArgs(
+          accountAddr, deployer, "0x", setOperatorData1, deployer)
+      ).to.emit(account, "NewOperator").withArgs(
         deployer.address, tester1.address);
-      expect(await accountContract.getOperator()).to.eq(tester1.address);
+      expect(await account.getOperator()).to.eq(tester1.address);
+      expect(await account.getMode()).to.eq(1); // operator mode
 
+      // now tester1 is operator, admin can set it to deployer
+      const setOperatorData2 = accountIface.encodeFunctionData(
+        "setOperator", [deployer.address]);
+      await expect(
+        callAsAdmin(
+          accountAddr, passkey, "0x", setOperatorData2, deployer)
+      ).to.emit(account, "NewOperator").withArgs(
+        tester1.address, deployer.address);
+      expect(await account.getOperator()).to.eq(deployer.address);
+      expect(await account.getMode()).to.eq(0); // admin mode
+
+      // now deployer is operator, let's set it to tester1 via EIP-4337 execute
+      const executeData1 = account.interface.encodeFunctionData(
+        "execute", [accountAddr, 0, setOperatorData1]);
+      await expect(
+        callAsOperator(
+          accountAddr, deployer, "0x", executeData1, tester1)
+      ).to.emit(account, "NewOperator").withArgs(
+        deployer.address, tester1.address);
+      expect(await account.getOperator()).to.eq(tester1.address);
+      expect(await account.getMode()).to.eq(1); // operator mode
+
+      // now tester1 is operator, let's set it to deployer via EIP-4337 execute
+      const executeData2 = account.interface.encodeFunctionData(
+        "execute", [accountAddr, 0, setOperatorData2]);
+      await expect(
+        callAsAdmin(
+          accountAddr, passkey, "0x", executeData2, tester1)
+      ).to.emit(account, "NewOperator").withArgs(
+        tester1.address, deployer.address);
+      expect(await account.getOperator()).to.eq(deployer.address);
+      expect(await account.getMode()).to.eq(0); // admin mode
+    });
+
+    it("should reset admin properly", async function () {
+      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+      const account = await deployAccount(admin, passkey);
+      const accountAddr = await account.getAddress();
+      const adminAddr = await admin.getAddress();
+      expect(await account.getMode()).to.eq(0); // admin mode
+      expect(await account.getAdmin()).to.eq(adminAddr);
+
+      const passkey2 = genPasskey();
+      const newAdminData = buildAdminData(admin, passkey2, "passkey2");
+      let setAdminData = accountIface.encodeFunctionData(
+        "setAdmin", [newAdminData]);
       const newKeyId = hre.ethers.solidityPackedKeccak256(
         ["uint256", "uint256"],
         [passkey2.pubKeyX, passkey2.pubKeyY]
       );
+
+      // tester cannot set admin
+      await expect(
+        account.connect(tester1).setAdmin(newAdminData)
+      ).to.be.revertedWithCustomError(account, "NotAuthorized");
+
+      // operator can not set admin
+      await expect(
+        account.connect(tester1).setAdmin(newAdminData)
+      ).to.be.revertedWithCustomError(account, "NotAuthorized");
+
+      // operator cannot set admin via EIP-4337, but the mode
+      // will be updated since validateSignature is called
+      await expect(
+        callAsOperator(
+          accountAddr, deployer, "0x", setAdminData, tester1)
+      ).to.emit(entrypoint, "UserOperationRevertReason");
+      expect(await account.getMode()).to.eq(1); // operator mode
+
+      // admin can set admin via EIP-4337
       await expect(
         callAsAdmin(
-          account, passkey, "0x", setAdminData, deployer, true)
+          accountAddr, passkey, "0x", setAdminData, deployer)
       ).to.emit(admin, "PasskeySet").withArgs(
-        account, newKeyId, "passkey2", [passkey2.pubKeyX, passkey2.pubKeyY]);
+        accountAddr, newKeyId, "passkey2", [passkey2.pubKeyX, passkey2.pubKeyY]);
+
+      // operator cannot set admin via EIP-4337 execute, but the mode
+      // will be updated since validateSignature is called
+      const adminData = buildAdminData(admin, passkey, "passkey1");
+      setAdminData = accountIface.encodeFunctionData(
+        "setAdmin", [adminData]);
+      const executeData = account.interface.encodeFunctionData(
+        "execute", [accountAddr, 0, setAdminData]);
+      await expect(
+        callAsOperator(
+          accountAddr, deployer, "0x", executeData, deployer)
+      ).to.emit(entrypoint, "UserOperationRevertReason")
+      expect(await account.getMode()).to.eq(1); // operator mode
+
+      // admin can set admin via EIP-4337 execute
+      const keyId = hre.ethers.solidityPackedKeccak256(
+        ["uint256", "uint256"],
+        [passkey.pubKeyX, passkey.pubKeyY]
+      );
+      await expect(
+        callAsAdmin(
+          accountAddr, passkey2, "0x", executeData, deployer)
+      ).to.emit(admin, "PasskeySet").withArgs(
+        accountAddr, keyId, "passkey1", [passkey.pubKeyX, passkey.pubKeyY]);
+    });
+
+    it("should upgrade contract properly", async function () {
+      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+      const account = await deployAccount(admin, passkey);
+      const accountAddr = await account.getAddress();
+      const oldImpl = await account.implementation();
+      const newImpl = (await hre.deployments.deploy(
+        "OpenId3AccountV2ForTest",
+        {
+          from: deployer.address,
+          args: [await account.entryPoint()],
+        }
+      )).address;
+
+      // cannot reinitalize the proxy
+      const accountProxy = await hre.ethers.getContractAt(
+        "AccountProxy",
+        accountAddr
+      );
+      await expect(
+        accountProxy.initProxy(newImpl, '0x')
+      ).to.be.revertedWithCustomError(accountProxy, "AlreadyInitiated");
+  
+      // cannot upgrade without EIP-4337
+      await expect(
+        account.connect(deployer).upgradeTo(newImpl)
+      ).to.be.revertedWithCustomError(account, "NotAuthorized");
+  
+      // operator cannot upgrade
+      const upgradeData = account.interface.encodeFunctionData(
+        "upgradeTo", [newImpl]);
+      const executeData = account.interface.encodeFunctionData(
+        "execute", [accountAddr, 0, upgradeData]);
+      expect(
+        await callAsOperator(
+          accountAddr, deployer, "0x", executeData, deployer)
+      ).to.emit(entrypoint, "UserOperationRevertReason");
+      expect(await account.getMode()).to.eq(1); // operator mode
+      expect(await account.implementation()).to.eq(oldImpl); // not upgraded
+
+      // admin can upgrade
+      expect(
+        await callAsAdmin(
+          accountAddr, passkey, "0x", executeData, deployer)
+      ).to.emit(account, "Upgraded").withArgs(newImpl);
+      expect(await account.getMode()).to.eq(0); // admin mode
+      expect(await account.implementation()).to.eq(newImpl); // upgraded
     });
 });
