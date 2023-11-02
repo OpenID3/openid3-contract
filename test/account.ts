@@ -10,6 +10,7 @@ import { getInterface } from "../lib/utils";
 import {
   OpenId3Account__factory,
   ERC20ForTest__factory,
+  ERC721ForTest__factory,
   ERC1155ForTest__factory,
 } from "../types";
 import {
@@ -36,6 +37,15 @@ describe("OpenId3Account", function () {
       args: ["TestERC20", "TST", supply],
     });
     return ERC20ForTest__factory.connect(deployed.address, deployer);
+  };
+
+  const deployErc721 = async() => {
+    const { deployer } = await hre.ethers.getNamedSigners();
+    const deployed = await hre.deployments.deploy("ERC721ForTest", {
+      from: deployer.address,
+      args: ["TestErc721", "TST"],
+    });
+    return ERC721ForTest__factory.connect(deployed.address, deployer);
   };
 
   const deployErc1155 = async() => {
@@ -399,6 +409,45 @@ describe("OpenId3Account", function () {
     expect(
       await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress)
     ).to.eq(ethAmount);
+  });
+
+  it("Should hold and transfer ERC721 successfully", async function () {
+    const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+    const accountAddr = await getAccountAddr(admin, passkey);
+
+    // receive erc721 before account created
+    const erc721 = await deployErc721();
+    await expect(
+      erc721.connect(deployer).transferFrom(
+        deployer.address, accountAddr, 0)
+    ).to.emit(erc721, "Transfer")
+      .withArgs(deployer.address, accountAddr, 0);
+    expect(await erc721.ownerOf(0)).to.eq(accountAddr);
+
+    // deploy account
+    const account = await deployAccount(admin, passkey);
+
+    // receive erc721 after account created
+    await expect(
+      erc721.connect(deployer).transferFrom(
+        deployer.address, accountAddr, 1
+      )
+    ).to.emit(erc721, "Transfer")
+      .withArgs(deployer.address, accountAddr, 1);
+      expect(await erc721.ownerOf(1)).to.eq(accountAddr);
+
+    // send erc721
+    const erc721Data = erc721.interface.encodeFunctionData(
+      "transferFrom",
+      [accountAddr, tester1.address, 0]
+    );
+    const executeData = account.interface.encodeFunctionData(
+      "execute", [await erc721.getAddress(), 0, erc721Data]);
+    await expect(
+      callAsOperator(accountAddr, deployer, "0x", executeData, tester1)
+    ).to.emit(erc721, "Transfer").withArgs(
+      accountAddr, tester1.address, 0);
+    expect(await erc721.ownerOf(0)).to.eq(tester1.address);
   });
 
   it("Should hold and transfer ERC1155 successfully", async function () {
