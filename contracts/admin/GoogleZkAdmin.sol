@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
@@ -10,6 +11,8 @@ import "../lib/RsaVerifier.sol";
 import "./AccountAdminBase.sol";
 
 contract GoogleZkAdmin is IERC1271, AccountAdminBase {
+    using Strings for uint256;
+
     event AccountLinked(address indexed account, bytes32 indexed idHash);
 
     error InvalidRsaKey(string key, bytes32 keyId);
@@ -23,22 +26,18 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
     bytes32 RSA_KEY_ID2 = hex"1c21d7977155420d8f58affbc31983f09c956b361d2e9a70df010b3a8a3e3c0f";
     bytes RSA_N2 = hex"ab985ca3047822e3e24af1dbc23f51bfd8f65d19eb81b00015806aa0b070515e4654888d3ca9d00586bc64420ada76a3f60aa9a370d4f65c7b77b473795973092e5e500d8b57de3ef8a6d3d188082670298f9fa1c8321a7af23549fd9842bfdc9ed8152efc6a7d6d67f59bdb4128adcf94e0874729959bee8963053eee3f9a1e81dd284428897eaa2fa1d1c6499517087f467091f70339313c6ea133594be50a9087f452ba328f582e3c392eba017077546ce83729ebb4b96e520848bed9705080217ac45de4962722c309efd878423f24e25f4a5a33fb13dae2aca58a1c93e2108254364c4c6826a6d865ee8222748788003af1f9129094039ee45913b5d325";
 
-    // keccak256(bytes("https://accounts.google.com"))
-    bytes32 constant issHash = "0x";
-    // keccak256(bytes("YOUR_AUD"))
-    bytes32 constant audHash = "0x";
-    struct PlonkZkProof {
-        uint256 verifierDigest;
-        uint256 inputHash1;
-        uint256 inputHash2;
-        bytes proof;
-    }
+    // sha256(bytes("https://accounts.google.com"))
+    bytes32 constant issHash = hex"89a8000a68d759c68bfaeab5056d67342e97643511923e63702da58a9aac8f38";
+    // sha256(CLIENT_ID)
+    bytes32 constant audHash = hex"639d84aa3d96a6c1d4d140267fb9d209a412d8cd2de2702e3f309149ae2321ec";
+    // sha256("")
+    bytes32 constant outputHash = hex"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
     struct GoogleZkValidationData {
         OpenIdZkProofPublicInput input;
-        bytes32 keyId;
         bytes32 userOpHash;
-        PlonkZkProof zkProof;
+        uint256 inputHash;
+        bytes proof;
     }
 
     IPlonkVerifier immutable public plonkVerifier;
@@ -55,26 +54,36 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
 
     function getLinkedAccountHash(
         address account
-    ) external view returns(bytes32) {
+    ) public view returns(bytes32) {
         return _accounts[account];
     }
 
     function isValidSignature(
-        bytes32 /* challenge */,
+        bytes32 challenge,
         bytes calldata validationData
     ) public view override returns(bytes4) {
         (GoogleZkValidationData memory data) = abi.decode(validationData, (GoogleZkValidationData));
+        bytes32 userIdHash = getLinkedAccountHash(msg.sender);
         // 1. construct public inputs of proof
+        bytes32 inputHash = sha256(bytes(abi.encodePacked(
+            data.input.kidHash, // sha256
+            issHash,
+            audHash,
+            userIdHash, // sha256
+            sha256(bytes(uint256(challenge).toHexString())),
+            sha256(bytes(data.input.exp.toString())),
+            data.input.jwtHeaderAndPayloadHash // sha256
+        )));
 
         // 2. verify JWT signature
-        if (data.keyId == RSA_KEY_ID1) {
+        if (data.input.kidHash == RSA_KEY_ID1) {
             RsaVerifier.pkcs1Sha256(
                 data.input.jwtHeaderAndPayloadHash,
                 data.input.jwtSignature,
                 RSA_E,
                 RSA_N1
             );
-        } else if (data.keyId == RSA_KEY_ID2) {
+        } else if (data.input.kidHash == RSA_KEY_ID2) {
             RsaVerifier.pkcs1Sha256(
                 data.input.jwtHeaderAndPayloadHash,
                 data.input.jwtSignature,
@@ -82,15 +91,15 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
                 RSA_N2
             );
         } else {
-            revert InvalidRsaKey("keyId", data.keyId);
+            revert InvalidRsaKey("keyId", data.input.kidHash);
         }
 
         // 3. verify zk input
         uint256[] memory publicInputs = new uint256[](3);
-        publicInputs[0] = data.zkProof.verifierDigest;
-        publicInputs[0] = data.zkProof.inputHash1;
-        publicInputs[0] = data.zkProof.inputHash2;
-        if (plonkVerifier.verify(data.zkProof.proof, publicInputs)) {
+        publicInputs[0] = uint256(outputHash);
+        publicInputs[0] = uint256(inputHash);
+        publicInputs[0] = uint256(outputHash);
+        if (plonkVerifier.verify(data.proof, publicInputs)) {
             return 0x1626ba7e; // magic value of IERC1271
         } else {
             return bytes4(0);
