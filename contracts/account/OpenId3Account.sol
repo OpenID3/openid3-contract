@@ -44,6 +44,7 @@ contract OpenId3Account is
     error OnlyAdminAllowed();
     error NotAuthorized();
     error InvalidMode(uint8 mode);
+    error WrongArrayLength();
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
     event NewOperator(address indexed oldOwner, address indexed newOwner);
@@ -116,13 +117,17 @@ contract OpenId3Account is
         _call(dest, value, func);
     }
 
-    function executeBatch(address[] calldata dest, bytes[] calldata func)
-        external
-    {
+    function executeBatch(
+        address[] calldata dest,
+        uint256[] memory value,
+        bytes[] calldata func
+    ) external {
         _guard(false);
-        require(dest.length == func.length, "wrong array lengths");
+        if (dest.length != value.length || value.length != func.length) {
+            revert WrongArrayLength();
+        }
         for (uint256 i = 0; i < dest.length; i++) {
-            _call(dest[i], 0, func[i]);
+            _call(dest[i], value[i], func[i]);
         }
     }
 

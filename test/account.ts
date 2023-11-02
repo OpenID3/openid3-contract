@@ -7,7 +7,10 @@ import {
 import * as hre from "hardhat";
 import { AddressLike, Contract, Interface } from "ethers";
 import { getInterface } from "../lib/utils";
-import { OpenId3Account__factory } from "../types";
+import {
+  OpenId3Account__factory,
+  ERC20ForTest__factory,
+} from "../types";
 import {
   genPasskey,
   buildAdminData,
@@ -24,6 +27,15 @@ describe("OpenId3Account", function () {
     let factory: Contract;
     let accountIface: Interface;
     let passkey: Passkey;
+
+    const deployErc20 = async(supply: number) => {
+      const { deployer } = await hre.ethers.getNamedSigners();
+      const deployed = await hre.deployments.deploy("ERC20ForTest", {
+        from: deployer.address,
+        args: ["TestERC20", "TST", supply],
+      });
+      return ERC20ForTest__factory.connect(deployed.address, deployer);
+    }
 
     const deployAccount = async(
       admin: Contract,
@@ -264,7 +276,7 @@ describe("OpenId3Account", function () {
     });
 
     it("should upgrade contract properly", async function () {
-      const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+      const { deployer } = await hre.ethers.getNamedSigners();
       const account = await deployAccount(admin, passkey);
       const accountAddr = await account.getAddress();
       const oldImpl = await account.implementation();
@@ -309,5 +321,43 @@ describe("OpenId3Account", function () {
       ).to.emit(account, "Upgraded").withArgs(newImpl);
       expect(await account.getMode()).to.eq(0); // admin mode
       expect(await account.implementation()).to.eq(newImpl); // upgraded
+    });
+
+    it("should transfer ERC20 properly", async function () {
+      const { deployer, tester1, tester2 } = await hre.ethers.getNamedSigners();
+      const account = await deployAccount(admin, passkey);
+      const accountAddr = await account.getAddress();
+      const erc20 = await deployErc20(10000);
+      const erc20Addr = await erc20.getAddress();
+      await erc20.connect(deployer).transfer(accountAddr, 1000);
+
+      // transfer erc20 token
+      const erc20Data = erc20.interface.encodeFunctionData(
+        "transfer", [tester1.address, 100]);
+      const executeData = account.interface.encodeFunctionData(
+        "execute", [erc20Addr, 0, erc20Data]);
+      await expect(
+        callAsOperator(
+          accountAddr, deployer, "0x", executeData, tester1)
+      ).to.emit(erc20, "Transfer").withArgs(accountAddr, tester1.address, 100);
+
+      // batch erc20 transfer with eth transfer
+      const erc20Data2 = erc20.interface.encodeFunctionData(
+        "transfer", [tester2.address, 100]);
+      const ethAmount = hre.ethers.parseEther("0.1");
+      const executeBatchData = account.interface.encodeFunctionData(
+        "executeBatch", [
+          [erc20Addr, erc20Addr, hre.ethers.ZeroAddress],
+          [0, 0, ethAmount],
+          [erc20Data, erc20Data2, "0x"]
+        ]);
+      await expect(
+        callAsOperator(
+          accountAddr, deployer, "0x", executeBatchData, tester1)
+      ).to.emit(erc20, "Transfer")
+      .withArgs(accountAddr, tester1.address, 100)
+      .to.emit(erc20, "Transfer")
+      .withArgs(accountAddr, tester2.address, 100);
+      expect(await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress)).to.eq(ethAmount);
     });
 });
