@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "../interfaces/IAccountAdmin.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
 import "../lib/RsaVerifier.sol";
 import "./AccountAdminBase.sol";
 
-contract GoogleZkAdmin is IERC1271, AccountAdminBase {
+contract GoogleZkAdmin is IAccountAdmin, AccountAdminBase {
     using Strings for uint256;
 
     event AccountLinked(address indexed account, bytes32 indexed idHash);
@@ -58,10 +58,10 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
         return _accounts[account];
     }
 
-    function isValidSignature(
+    function validateSignature(
         bytes32 challenge,
         bytes calldata validationData
-    ) public view override returns(bytes4) {
+    ) public view override returns(uint256) {
         (GoogleZkValidationData memory data) = abi.decode(validationData, (GoogleZkValidationData));
         bytes32 userIdHash = getLinkedAccountHash(msg.sender);
         // 1. construct public inputs of proof
@@ -71,7 +71,7 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
             audHash,
             userIdHash, // sha256
             sha256(bytes(uint256(challenge).toHexString())),
-            sha256(bytes(data.input.exp.toString())),
+            sha256(bytes(data.input.exp)),
             data.input.jwtHeaderAndPayloadHash // sha256
         )));
 
@@ -100,9 +100,22 @@ contract GoogleZkAdmin is IERC1271, AccountAdminBase {
         publicInputs[0] = uint256(inputHash);
         publicInputs[0] = uint256(outputHash);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
-            return 0x1626ba7e; // magic value of IERC1271
+            uint256 validUntil = stringToUint(data.input.exp);
+            return validUntil << 160;
         } else {
-            return bytes4(0);
+            return 1;
+        }
+    }
+
+    function stringToUint(string memory s) internal pure returns (uint256 result) {
+        bytes memory b = bytes(s);
+        uint256 i;
+        result = 0;
+        for (i = 0; i < b.length; i++) {
+            uint256 c = uint256(uint8(b[i]));
+            if (c >= 48 && c <= 57) {
+                result = result * 10 + (c - 48);
+            }
         }
     }
 }

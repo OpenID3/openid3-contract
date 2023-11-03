@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/interfaces/IERC165.sol";
+import "../interfaces/IAccountAdmin.sol";
 import "../interfaces/IOpenId3Account.sol";
 
-abstract contract AccountAdminBase {
+abstract contract AccountAdminBase is IERC165 {
     error OnlyAdminAllowed();
 
     modifier onlyAdminMode() {
@@ -12,5 +14,9 @@ abstract contract AccountAdminBase {
             revert OnlyAdminAllowed();
         }
         _;
+    }
+
+    function supportsInterface(bytes4 interfaceId) public pure returns(bool) {
+        return interfaceId == type(IAccountAdmin).interfaceId;
     }
 }

@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
 
+import "../interfaces/IAccountAdmin.sol";
 import "../interfaces/IOpenId3Account.sol";
 
 library OpenId3AccountStorage {
@@ -137,7 +138,7 @@ contract OpenId3Account is
         OpenId3AccountStorage.layout().mode = mode;
         if (mode == 0x00) { // admin mode
             address admin = OpenId3AccountStorage.layout().admin;
-            return _validateSignature(admin, userOpHash, userOp.signature[1:]);
+            return _validateAdminSignature(admin, userOpHash, userOp.signature[1:]);
         } else if (mode == 0x01) { // operator mode
             address operator = OpenId3AccountStorage.layout().operator;
             bytes32 message = userOpHash.toEthSignedMessageHash();
@@ -192,6 +193,20 @@ contract OpenId3Account is
                 revert(add(result, 32), mload(result))
             }
         }
+    }
+
+    function _validateAdminSignature(
+        address signer,
+        bytes32 userOpHash,
+        bytes calldata signature
+    ) internal view returns(uint256) {
+        if (
+            signer.isContract() &&
+            IERC165(signer).supportsInterface(type(IAccountAdmin).interfaceId)
+        ) {
+            return IAccountAdmin(signer).validateSignature(userOpHash, signature);
+        }
+        return _validateSignature(signer, userOpHash, signature);
     }
 
     function _validateSignature(

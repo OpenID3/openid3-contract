@@ -4,10 +4,11 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "../interfaces/IAccountAdmin.sol";
 import "../lib/Secp256r1Verifier.sol";
 import "./AccountAdminBase.sol";
 
-contract PasskeyAdmin is IERC1271, AccountAdminBase {
+contract PasskeyAdmin is IAccountAdmin, AccountAdminBase {
     event PasskeySet(
         address indexed account,
         bytes32 indexed keyId,
@@ -42,14 +43,14 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
         return _passkeys[account];
     }
 
-    function isValidSignature(
+    function validateSignature(
         bytes32 challenge,
         bytes calldata validationData
-    ) public view override returns(bytes4) {
+    ) public view override returns(uint256) {
         PasskeyValidationData memory data
             = abi.decode(validationData, (PasskeyValidationData));
         if (_genKeyId(data.pubKey) != _passkeys[msg.sender]) {
-            return bytes4(0);
+            return 1;
         }
         string memory opHashBase64 = Base64.encode(bytes.concat(challenge));
         string memory clientDataJSON = string.concat(
@@ -60,9 +61,9 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
         bytes32 clientHash = sha256(bytes(clientDataJSON));
         bytes32 message = sha256(bytes.concat(data.authData, clientHash));
         if (Secp256r1Verifier.verify(data.pubKey, data.r, data.s, uint256(message))) {
-            return 0x1626ba7e; // magic value for ERC1271
+            return 0;
         } else {
-            return bytes4(0);
+            return 1;
         }
     }
 
