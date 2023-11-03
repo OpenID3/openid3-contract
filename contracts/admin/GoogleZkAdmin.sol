@@ -4,13 +4,12 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "../interfaces/IAccountAdmin.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
 import "../lib/RsaVerifier.sol";
 import "./AccountAdminBase.sol";
 
-contract GoogleZkAdmin is IAccountAdmin, AccountAdminBase {
+contract GoogleZkAdmin is AccountAdminBase {
     using Strings for uint256;
 
     event AccountLinked(address indexed account, bytes32 indexed idHash);

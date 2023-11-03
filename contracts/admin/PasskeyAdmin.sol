@@ -4,11 +4,10 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import "../interfaces/IAccountAdmin.sol";
 import "../lib/Secp256r1Verifier.sol";
 import "./AccountAdminBase.sol";
 
-contract PasskeyAdmin is IAccountAdmin, AccountAdminBase {
+contract PasskeyAdmin is AccountAdminBase {
     event PasskeySet(
         address indexed account,
         bytes32 indexed keyId,

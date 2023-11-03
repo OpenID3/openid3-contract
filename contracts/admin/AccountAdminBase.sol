@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/interfaces/IERC165.sol";
 import "../interfaces/IAccountAdmin.sol";
 import "../interfaces/IOpenId3Account.sol";
 
-abstract contract AccountAdminBase is IERC165 {
+abstract contract AccountAdminBase is IERC165, IAccountAdmin {
     error OnlyAdminAllowed();
 
     modifier onlyAdminMode() {
