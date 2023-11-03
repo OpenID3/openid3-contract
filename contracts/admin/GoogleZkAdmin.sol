@@ -26,16 +26,14 @@ contract GoogleZkAdmin is AccountAdminBase {
     bytes RSA_N2 = hex"ab985ca3047822e3e24af1dbc23f51bfd8f65d19eb81b00015806aa0b070515e4654888d3ca9d00586bc64420ada76a3f60aa9a370d4f65c7b77b473795973092e5e500d8b57de3ef8a6d3d188082670298f9fa1c8321a7af23549fd9842bfdc9ed8152efc6a7d6d67f59bdb4128adcf94e0874729959bee8963053eee3f9a1e81dd284428897eaa2fa1d1c6499517087f467091f70339313c6ea133594be50a9087f452ba328f582e3c392eba017077546ce83729ebb4b96e520848bed9705080217ac45de4962722c309efd878423f24e25f4a5a33fb13dae2aca58a1c93e2108254364c4c6826a6d865ee8222748788003af1f9129094039ee45913b5d325";
 
     // sha256(bytes("https://accounts.google.com"))
-    bytes32 constant issHash = hex"89a8000a68d759c68bfaeab5056d67342e97643511923e63702da58a9aac8f38";
-    // sha256(CLIENT_ID)
-    bytes32 constant audHash = hex"639d84aa3d96a6c1d4d140267fb9d209a412d8cd2de2702e3f309149ae2321ec";
+    bytes32 constant ISS_SHA256 = hex"89a8000a68d759c68bfaeab5056d67342e97643511923e63702da58a9aac8f38";
+    // sha256(CLIENT_ID_OF_OPENID3)
+    bytes32 constant AUD_SHA256 = hex"639d84aa3d96a6c1d4d140267fb9d209a412d8cd2de2702e3f309149ae2321ec";
     // sha256("")
-    bytes32 constant outputHash = hex"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    bytes32 constant OUTPUT_SHA256 = hex"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
     struct GoogleZkValidationData {
         OpenIdZkProofPublicInput input;
-        bytes32 userOpHash;
-        uint256 inputHash;
         bytes proof;
     }
 
@@ -65,10 +63,10 @@ contract GoogleZkAdmin is AccountAdminBase {
         bytes32 userIdHash = getLinkedAccountHash(msg.sender);
         // 1. construct public inputs of proof
         bytes32 inputHash = sha256(bytes(abi.encodePacked(
-            data.input.kidHash, // sha256
-            issHash,
-            audHash,
-            userIdHash, // sha256
+            data.input.kidHash, // sha256(kid)
+            ISS_SHA256,
+            AUD_SHA256,
+            userIdHash, // sha256(googleId)
             sha256(bytes(uint256(challenge).toHexString())),
             sha256(bytes(data.input.exp)),
             data.input.jwtHeaderAndPayloadHash // sha256
@@ -93,11 +91,11 @@ contract GoogleZkAdmin is AccountAdminBase {
             revert InvalidRsaKey("keyId", data.input.kidHash);
         }
 
-        // 3. verify zk input
+        // 3. verify ZK proof
         uint256[] memory publicInputs = new uint256[](3);
-        publicInputs[0] = uint256(outputHash);
+        publicInputs[0] = uint256(OUTPUT_SHA256); // circuit digest
         publicInputs[0] = uint256(inputHash);
-        publicInputs[0] = uint256(outputHash);
+        publicInputs[0] = uint256(OUTPUT_SHA256);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
             uint256 validUntil = stringToUint(data.input.exp);
             return validUntil << 160;
