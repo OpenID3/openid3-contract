@@ -93,9 +93,9 @@ contract GoogleZkAdmin is AccountAdminBase {
 
         // 3. verify ZK proof
         uint256[] memory publicInputs = new uint256[](3);
-        publicInputs[0] = uint256(OUTPUT_SHA256); // circuit digest
-        publicInputs[0] = uint256(inputHash);
-        publicInputs[0] = uint256(OUTPUT_SHA256);
+        publicInputs[0] = uint256(data.input.circuitDigest); // circuit digest
+        publicInputs[1] = uint256(inputHash);
+        publicInputs[2] = uint256(OUTPUT_SHA256);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
             uint256 validUntil = stringToUint(data.input.exp);
             return validUntil << 160;
