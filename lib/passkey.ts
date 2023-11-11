@@ -18,7 +18,7 @@ export const genPasskey = () : Passkey => {
     return { privKey, pubKey, pubKeyX: point.x, pubKeyY: point.y };
 }
 
-export const buildAdminData = (
+export const buildPasskeyAdminData = (
     admin: Contract,
     key: Passkey,
     keyId: string,
@@ -33,7 +33,7 @@ export const buildAdminData = (
       ["address", "bytes"], [admin.target, adminData])
 }
 
-export function buildAdminValidationData(
+function buildAdminValidationData(
     key: Passkey,
     userOpHash: string,
 ) {
@@ -72,7 +72,7 @@ export function buildAdminValidationData(
     };
 }
 
-export async function callAsAdmin(
+export async function callFromPasskey(
     sender: string,
     key: Passkey,
     initCode: string,
@@ -95,20 +95,5 @@ export async function callAsAdmin(
         ]]
     );
     userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [0, signature]);
-    return await callWithEntryPoint(userOp, signer, log ?? false);
-}
-
-export async function callAsOperator(
-    sender: string,
-    operator: ethers.Signer,
-    initCode: string,
-    callData: string,
-    signer: HardhatEthersSigner,
-    log?: boolean
-) {
-    const userOp = await genUserOp(sender, initCode, callData);
-    const userOpHash = await genUserOpHash(userOp);
-    const signature = await operator.signMessage(ethers.getBytes(userOpHash));
-    userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [1, signature]);
     return await callWithEntryPoint(userOp, signer, log ?? false);
 }

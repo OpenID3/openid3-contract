@@ -2,7 +2,7 @@ import { expect } from "chai";
 import {
     getEntryPoint,
     getPasskeyAdmin,
-    getAccountFactory
+    getAccountFactory,
 } from "../lib/utils";
 import * as hre from "hardhat";
 import { AddressLike, Contract, Interface } from "ethers";
@@ -15,12 +15,11 @@ import {
 } from "../types";
 import {
   genPasskey,
-  buildAdminData,
-  callAsOperator,
+  buildPasskeyAdminData,
   type Passkey,
-  callAsAdmin,
-} from "../lib/admin";
-import { genInitCode } from "../lib/userop";
+  callFromPasskey,
+} from "../lib/passkey";
+import { genInitCode, callAsOperator, } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("OpenId3Account", function () {
@@ -64,7 +63,7 @@ describe("OpenId3Account", function () {
     passkey: Passkey,
   ) => {
     const { deployer } = await hre.ethers.getNamedSigners();
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
     return await factory.predictClonedAddress(accountInitData);
@@ -75,7 +74,7 @@ describe("OpenId3Account", function () {
     passkey: Passkey,
   ) => {
     const { deployer } = await hre.ethers.getNamedSigners();
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
     const cloned = await factory.predictClonedAddress(accountInitData);
@@ -103,7 +102,7 @@ describe("OpenId3Account", function () {
 
   it("should deploy account", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
 
@@ -126,7 +125,7 @@ describe("OpenId3Account", function () {
 
   it("should clone account", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
 
@@ -149,7 +148,7 @@ describe("OpenId3Account", function () {
 
   it("should clone via eip4337 with eth transfer", async function () {
     const { deployer, tester1 } = await hre.ethers.getNamedSigners();
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
     const account = await factory.predictClonedAddress(accountInitData);
@@ -211,7 +210,7 @@ describe("OpenId3Account", function () {
     const setOperatorData2 = accountIface.encodeFunctionData(
       "setOperator", [deployer.address]);
     await expect(
-      callAsAdmin(
+      callFromPasskey(
         accountAddr, passkey, "0x", setOperatorData2, deployer)
     ).to.emit(account, "NewOperator").withArgs(
       tester1.address, deployer.address);
@@ -233,7 +232,7 @@ describe("OpenId3Account", function () {
     const executeData2 = account.interface.encodeFunctionData(
       "execute", [accountAddr, 0, setOperatorData2]);
     await expect(
-      callAsAdmin(
+      callFromPasskey(
         accountAddr, passkey, "0x", executeData2, tester1)
     ).to.emit(account, "NewOperator").withArgs(
       tester1.address, deployer.address);
@@ -250,7 +249,7 @@ describe("OpenId3Account", function () {
     expect(await account.getAdmin()).to.eq(adminAddr);
 
     const passkey2 = genPasskey();
-    const newAdminData = buildAdminData(admin, passkey2, "passkey2");
+    const newAdminData = buildPasskeyAdminData(admin, passkey2, "passkey2");
     let setAdminData = accountIface.encodeFunctionData(
       "setAdmin", [newAdminData]);
     const newKeyId = hre.ethers.solidityPackedKeccak256(
@@ -278,14 +277,14 @@ describe("OpenId3Account", function () {
 
     // admin can set admin via EIP-4337
     await expect(
-      callAsAdmin(
+      callFromPasskey(
         accountAddr, passkey, "0x", setAdminData, deployer)
     ).to.emit(admin, "PasskeySet").withArgs(
       accountAddr, newKeyId, "passkey2", [passkey2.pubKeyX, passkey2.pubKeyY]);
 
     // operator cannot set admin via EIP-4337 execute, but the mode
     // will be updated since validateSignature is called
-    const adminData = buildAdminData(admin, passkey, "passkey1");
+    const adminData = buildPasskeyAdminData(admin, passkey, "passkey1");
     setAdminData = accountIface.encodeFunctionData(
       "setAdmin", [adminData]);
     const executeData = account.interface.encodeFunctionData(
@@ -302,7 +301,7 @@ describe("OpenId3Account", function () {
       [passkey.pubKeyX, passkey.pubKeyY]
     );
     await expect(
-      callAsAdmin(
+      callFromPasskey(
         accountAddr, passkey2, "0x", executeData, deployer)
     ).to.emit(admin, "PasskeySet").withArgs(
       accountAddr, keyId, "passkey1", [passkey.pubKeyX, passkey.pubKeyY]);
@@ -349,7 +348,7 @@ describe("OpenId3Account", function () {
 
     // admin can upgrade
     expect(
-      await callAsAdmin(
+      await callFromPasskey(
         accountAddr, passkey, "0x", executeData, deployer)
     ).to.emit(account, "Upgraded").withArgs(newImpl);
     expect(await account.getMode()).to.eq(0); // admin mode

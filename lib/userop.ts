@@ -138,3 +138,17 @@ export const genUserOpHash = async (op: UserOperationStruct) => {
     );
 }
 
+export async function callAsOperator(
+  sender: string,
+  operator: ethers.Signer,
+  initCode: string,
+  callData: string,
+  signer: HardhatEthersSigner,
+  log?: boolean
+) {
+  const userOp = await genUserOp(sender, initCode, callData);
+  const userOpHash = await genUserOpHash(userOp);
+  const signature = await operator.signMessage(ethers.getBytes(userOpHash));
+  userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [1, signature]);
+  return await callWithEntryPoint(userOp, signer, log ?? false);
+}
