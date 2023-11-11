@@ -31,7 +31,9 @@ contract GoogleZkAdmin is AccountAdminBase {
     // sha256(bytes("https://accounts.google.com"))
     bytes32 constant public ISS_SHA256 = hex"89a8000a68d759c68bfaeab5056d67342e97643511923e63702da58a9aac8f38";
     // sha256("")
-    bytes32 constant public OUTPUT_SHA256 = hex"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    bytes32 constant public OUTPUT_SHA256_MASKED = hex"03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+    bytes32 constant public MASK = hex"1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
     uint256 constant public JWT_TTL = 1800; // 30 mins
 
@@ -66,20 +68,8 @@ contract GoogleZkAdmin is AccountAdminBase {
         bytes calldata validationData
     ) public view override returns(uint256) {
         (GoogleZkValidationData memory data) = abi.decode(validationData, (GoogleZkValidationData));
-        bytes32 userIdHash = getLinkedAccountHash(msg.sender);
-        // 1. construct public inputs of proof
-        bytes32 inputHash = sha256(abi.encodePacked(
-            data.input.jwtHeaderAndPayloadHash,
-            data.input.kidHash, // kid
-            ISS_SHA256, // iss
-            audHash, // aud
-            sha256(bytes(toHexString(uint256(challenge)))), // nonce
-            sha256(bytes(data.input.iat)), // iat
-            userIdHash // sub
-        ));
-        console.logBytes32(inputHash);
 
-        // 2. verify JWT signature
+        // 1. verify JWT signature
         if (data.input.kidHash == RSA_KEY_ID1) {
             if (!RsaVerifier.pkcs1Sha256(
                 data.input.jwtHeaderAndPayloadHash,
@@ -102,11 +92,24 @@ contract GoogleZkAdmin is AccountAdminBase {
             revert InvalidRsaKey("keyId", data.input.kidHash);
         }
 
+        // 2. construct public inputs of proof
+        bytes32 userIdHash = getLinkedAccountHash(msg.sender);
+        bytes32 inputHash = sha256(abi.encodePacked(
+            data.input.jwtHeaderAndPayloadHash,
+            data.input.kidHash, // kid
+            ISS_SHA256, // iss
+            audHash, // aud
+            sha256(bytes(toHexString(uint256(challenge)))), // nonce
+            sha256(bytes(data.input.iat)), // iat
+            userIdHash // sub
+        ));
+        bytes32 inputHashMasked = inputHash & MASK;
+
         // 3. verify ZK proof
         uint256[] memory publicInputs = new uint256[](3);
-        publicInputs[0] = uint256(data.circuitDigest); // circuit digest
-        publicInputs[1] = uint256(inputHash);
-        publicInputs[2] = uint256(OUTPUT_SHA256);
+        publicInputs[0] = uint256(data.circuitDigest);
+        publicInputs[1] = uint256(inputHashMasked);
+        publicInputs[2] = uint256(OUTPUT_SHA256_MASKED);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
             uint256 validUntil = stringToUint(data.input.iat) + JWT_TTL; // valid for 10mins
             return validUntil << 160;
