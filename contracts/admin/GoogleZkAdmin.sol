@@ -81,19 +81,23 @@ contract GoogleZkAdmin is AccountAdminBase {
 
         // 2. verify JWT signature
         if (data.input.kidHash == RSA_KEY_ID1) {
-            RsaVerifier.pkcs1Sha256(
+            if (!RsaVerifier.pkcs1Sha256(
                 data.input.jwtHeaderAndPayloadHash,
                 data.input.jwtSignature,
                 RSA_E,
                 RSA_N1
-            );
+            )) {
+                return 1;
+            }
         } else if (data.input.kidHash == RSA_KEY_ID2) {
-            RsaVerifier.pkcs1Sha256(
+            if (!RsaVerifier.pkcs1Sha256(
                 data.input.jwtHeaderAndPayloadHash,
                 data.input.jwtSignature,
                 RSA_E,
                 RSA_N2
-            );
+            )) {
+                return 1;
+            }
         } else {
             revert InvalidRsaKey("keyId", data.input.kidHash);
         }
