@@ -5,7 +5,6 @@ import { Contract } from "ethers";
 import { TestAccount, TestAccount__factory } from "../types";
 import { buildZkValidationData } from "../lib/google";
 import base64url from "base64url";
-import crypto from "crypto";
 
 const userOpHash = "0x63cfcbcf6b50e4e0ff31bd42dd97e31d241f28df2d873bb1c851d5f9e2f85c9b";
 const accountHash = "0x86d8e0c1f273208b3c798c73131e9765c3ba7ca86e06f969225cd43f21921fce";
@@ -15,16 +14,13 @@ const jwt = {
     signedDataHash: "0x25f75af748312bc41137eef2f2e5c9d337bbb3ea94f8ac2c7606ce9ade811d53",
     signature: "QlH8Kkz0o-ET8_0YIlLJ-tQy8xcKGIB8MxaKi_j-jnQI1RydovLZCEKcSOimgkQfLZ-DnVe9g2eAgYBr1jZ4tz6C6Fx00l1MSPD_IrVG0Ta19bwcokBHRbQo97sRoQiSnskww1DvW99e90lVUM-FFnOuvNiOvOeATH0MTQ5QwWc-uRTCiMlTbICY8qLMyW8mk0QM7zFZVTLNyOM7WEqxIJXgyM7eESsMuIBeniEDiGYQ1N50SMKdoe2w21zfI7JbKqS7KELzT0ybz29H5CTqHc6u75gOyCzkZWiKcRMfHk5EgbWhIcjttb2GHgFXbngbPa6j1ZR2BpFU0nLnFl0mkw",
 }
+
 const proof = {
-    "input_hash":"0x083b6a8da23fe6bc252c459430bfef5765e6a2389317a4353dd636f363974b93",
+    "input_hash":"0x1636c0c52bd4e175e5f79dc51806734fb36d4e172b75282e81dafb168b7f9a04",
     "output_hash":"0x03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "verifier_digest":"0x118700c68ddc60b11689a5f6b23425d19259dd26dfa114009d7d53dc6219ee72",
-    "proof":"0x2c2a753e9b2c4eca87793041f87383d2a8fb35abff44dd1d0ac10a42fc93f181262605e29cbb4591c0f1733ac6e7ca343cb9a9a6f6efb68c175b2e39b66703da1d013714de185ebc46efea81c449a02d1a3e33caf896e9690dade644b1cfb093082d329d0d26fe3203cd0d64f15aaa7818a7c05a97a26ac0c98b5d0076161e1524d1df318b6c2b6643bb45cc8edd6f0f50c7449f38b6354d6f9bd91e6493afe32315ff3f8c2a7b1b96da0d1898c9197388735990216ef17ab2d1579f3e0ab7a324afe3de6bacdfaad11fa3ad7aa41d0bcebb14af9982121cbda199c5c31d590a1b9cb98ac241283334ff6cde3c0db8aafca8921c284afd107ab4621106a9925417096078c0d30243bc0c1909c66696a91ba8cd248177a692d7ec732ca7946d840920fe4f80a6394638458f366a633347d1b6b850ccf0682ae0c8aa42bd3447fe1df79968d693c6ffc3dadea6f813b863ec80793afb30e455b1ba1f7ad76a27711778c0839f06be4fdde3f07b18efff14a7aa9f07b8a43de0ad0b2195f59ec80e0e6d9d18e95f54a682f50ff71bbfaa29ecd817f693afb4d190e3fabd82341fbb040efb38b3602e140003a2480b730f134e01cc8516221506686317c11aea37fa1131fdc20eb2dc4c99e1a640cf375f044bacf6484dae00ec83f04352afa9483c05d66369cef3d067f22117e74a0c933fa1d332328db38fd25f8db580a7a2d7af268202310c648a58c35be36e664a2991753b793b52b90b0ea8f43d7477f880710dfae6af26ba5e612fd51270a20c751321175fe4d35c749675e3c4e4e7416db70e786450c9213b53ac9cd0565659ffb06320351c7f5a3ba92695fbde2032a9ef0f7de7bd7b12acf7199ce1596d762d2eb626e013caf1b5a819cca25f0c653368058e85c85067e1310ecdca3b80390810aa943e48506f735352cdc26fea35208a223cb179c8d3d728ad63718e775a0cf0e95a740c15448d4679415f627ae16756112e132702edf66ecc46cf1b2de4cacacf5f7ad9ce74c7ee38d03bf6973cde4c120d8d9c41701bb6fd099fe408e778c75adb98e0789d606f5250f10855cfdeff2ab9d6d29949f0f6cd44a3b122f730e3bf14751ba2c496a8c8b80c883747900c2d390b5ef89de82c63df50585b4302b6ecd64522338193415b9b38d2da2df1e90be9b51c6eacbe5dbe728c390bed17ce142d4f95ca7926779d5fb83092a480cd19fdcb328265a6496d83c187b52f747af7617f81b1d43e2787d9a9f364f6856112bd11404f52ca5bc1df74e995a021f87b507ef0d9753d66c75fbc1ba5a156cc",
-}
-
-const sha256 = (input: string | Buffer) : Buffer => {
-    return crypto.createHash("sha256").update(input).digest();
-}
+    "proof":"0x2daa4170d775a29579d692d006c1274396fe8fd04ee73ffb59097815ecb0d98016352a6e2d4c88b900f9fb75b66380ac72a52c756619788a613c97b05616c55f301e6df08a23ecd7f28708ca73e0667dba01d5dff876326227c37095f83f3f730466a8ff189a3c125e4fc5b8f1ceb4af8658423007e4a0aa2ccf705f2105a8b12a7f37a654db4bf1e128fb97a3dca382ccad324140af76a64ecdb51144e6dfcf04ceb6da5139b0554d5e1a67db48e0d497b3278618b5718cbd34c6f18f74f37e2900c8d598975c918fb4f1c381ec33875052cebaf64befc06372da5a0e18feed09d55be5423eb4489a4ad48527a75aeca424a2a6a714e1250385992a9fa17f6602302a9ec5cfc745e64c513f1e658b61b250dfad35a437cc880360ef10e3586a1be73069c9d4bf828876da704bec2e09c0e7ad9dc6fed8ab8495cd11e19df9c7294beec8bccc45364217593e36622f33e6d99db09bef0689e5ddb9a06bd0dd4405b081529a5955490e831994ab79da657adeb37e37358cc22b9efb28d37442e72528efdf394bc0de00c880e80ba253a036a087bcbf15d917acb594651e7f98ce17645fd97721c9e13b0428a33789071bca2353fe37801babae58cd608c3c847e25dffd1a6ab0dc069e7464e6a09a7c9bc175dfdaa2a5f8e6a730c2c98f30a25c090a7ef189498d0251e8171bf48a2f12464f388173c615aecb0091bdc072308423c1138f6987e62117db3a16f860f313b394b2c1924fb79c617db49a1cadb68718392fa709aaf4d6797afa15f19205409207ba3ac5fbefdc67b68e2f0bae760d20a7c400f273a1a929f51b11187cb8d45c7ff1076fa100954169a15ca356f24f138a92f265cff2f6e7b8a9604a443aa5df33cfd4a72e2a539f01761cbe835da90ae3a5080e9ac9cbecee8aab9806a0f4998cd0616ef6ba533800fe410628dce618d8ed7348da22120903f60430b94cdd40978c0b4575f493d217489120c0dee520450eb16c47285f63fa9c594eaf6c1e064fe80609d3f5bf58c861495fcd4d3e0bc6ff7c42d0f26a85402e36b99a573c8be108d1dbde1f21e4e08a7a559617672c9dc58db456070770c698d1b7681640fe38f61cdec21c239df39d053414f71015d72306e842344a15fd433869d8730338259ad2cf0ea6e2f86e2e8f352d3ea5024b5582a42fd2b96f3c7b9785aabe71844d57833b249da106071a4736b28011215b2dbeae4168935a9b6d33658456476d3ef1663cd1a5c5f08cf454afca137f2d41ef4c21250f50c46f0b1f821b5c011a285d8e2c6749fa2880e111a56dc539"
+};
 
 describe("OpenId3Account", function () {
   let admin: Contract;
@@ -62,29 +58,6 @@ describe("OpenId3Account", function () {
     expect(
         await admin.getLinkedAccountHash(accountAddr)
     ).to.eq(accountHash);
-
-    const kidHash = sha256("f5f4bf46e52b31d9b6249f7309ad0338400680cd");
-    console.log("kid hash: ", kidHash.toString("hex"));
-    const issHash = sha256("https://accounts.google.com");
-    console.log("iss hash: ", issHash.toString("hex"));
-    const audHash = sha256("11980183890-ppa16i4601t9jf53ea2u2j77rig9mkrc.apps.googleusercontent.com");
-    console.log("aud hash: ", audHash.toString("hex"));
-    const nonceHash = sha256("63cfcbcf6b50e4e0ff31bd42dd97e31d241f28df2d873bb1c851d5f9e2f85c9b");
-    console.log("nonce hash: ", nonceHash.toString("hex"));
-    const iatHash = sha256("1699325390");
-    console.log("iat hash: ", iatHash.toString("hex"));
-    const subHash = sha256("105017222000589780480");
-    console.log("sub hash: ", subHash.toString("hex"));
-    const jwtAndPayloadHash = Buffer.from("25f75af748312bc41137eef2f2e5c9d337bbb3ea94f8ac2c7606ce9ade811d53", "hex");
-    console.log("jwt hash: ", jwtAndPayloadHash.toString("hex"));
-    const outputHash = sha256(Buffer.from([]));
-    console.log("output hash: ", outputHash.toString("hex"));
-    const combinedHash = Buffer.concat([
-        jwtAndPayloadHash, kidHash, issHash, audHash, nonceHash, iatHash, subHash,
-    ]);
-    console.log("with jwt hash: ");
-    console.log(combinedHash.toString("hex"));
-    console.log(sha256(combinedHash).toString("hex"));
 
     const validatonData = buildZkValidationData({
         jwt: {
