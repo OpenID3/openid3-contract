@@ -44,7 +44,7 @@ describe("OpenId3Account", function () {
     account = await deployTestAccount();
   });
 
-  it.only("should deploy account", async function () {
+  it("should valiate google zk proof", async function () {
     const jwtSignature = "0x" + base64url.toBuffer(
         jwt.signature).toString("hex");
     const data = admin.interface.encodeFunctionData(
