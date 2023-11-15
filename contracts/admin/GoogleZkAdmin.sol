@@ -111,7 +111,7 @@ contract GoogleZkAdmin is AccountAdminBase {
         publicInputs[1] = uint256(inputHashMasked);
         publicInputs[2] = uint256(OUTPUT_SHA256_MASKED);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
-            uint256 validUntil = stringToUint(data.input.iat) + JWT_TTL; // valid for 10mins
+            uint256 validUntil = stringToUint(data.input.iat) + JWT_TTL;
             return validUntil << 160;
         } else {
             return 1;
