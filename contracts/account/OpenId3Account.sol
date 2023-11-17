@@ -87,7 +87,7 @@ contract OpenId3Account is
 
     // both operator and admin are allowed to update operator
     function setOperator(address newOperator) external {
-        _guard(false);
+        _guard(true);
         _setOperator(newOperator);
     }
 

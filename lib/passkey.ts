@@ -21,13 +21,12 @@ export const genPasskey = () : Passkey => {
 export const buildPasskeyAdminData = (
     admin: Contract,
     key: Passkey,
-    keyId: string,
   ) => {
     let adminData = admin.interface.encodeFunctionData(
-      "setPasskey", [
-        keyId,
-        {pubKeyX: key.pubKeyX, pubKeyY: key.pubKeyY}
-      ]
+      "setPasskey", [{
+        pubKeyX: key.pubKeyX,
+        pubKeyY: key.pubKeyY
+      }]
     );
     return ethers.solidityPacked(
       ["address", "bytes"], [admin.target, adminData])
