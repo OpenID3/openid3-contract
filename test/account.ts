@@ -66,7 +66,8 @@ describe("OpenId3Account", function () {
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
-    return await factory.predictClonedAddress(accountInitData);
+    const salt = hre.ethers.keccak256(accountInitData);
+    return await factory.predictClonedAddress(salt);
   }
 
   const deployAccount = async(
@@ -77,7 +78,8 @@ describe("OpenId3Account", function () {
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
-    const cloned = await factory.predictClonedAddress(accountInitData);
+    const salt = hre.ethers.keccak256(accountInitData);
+    const cloned = await factory.predictClonedAddress(salt);
     await deposit(deployer, cloned);
     await factory.clone(accountInitData);
     return OpenId3Account__factory.connect(cloned, deployer);
@@ -123,13 +125,36 @@ describe("OpenId3Account", function () {
     expect(await admin.getPasskeyId(deployed)).to.eq(keyId);
   });
 
+  it("should clone account with admin only", async function () {
+    const { deployer } = await hre.ethers.getNamedSigners();
+    const adminData = buildPasskeyAdminData(admin, passkey);
+
+    const salt = hre.ethers.keccak256(adminData);
+    const cloned = await factory.predictClonedAddress(salt);
+    await expect(
+      factory.cloneWithAdminOnly(adminData)
+    ).to.emit(factory, "AccountDeployed").withArgs(cloned);
+
+    const account = OpenId3Account__factory.connect(cloned, deployer);
+    expect(await account.getMode()).to.eq(0);
+    expect(await account.getAdmin()).to.eq(await admin.getAddress());
+    expect(await account.getOperator()).to.eq(hre.ethers.ZeroAddress);
+
+    const keyId = hre.ethers.solidityPackedKeccak256(
+      ["uint256", "uint256"],
+      [passkey.pubKeyX, passkey.pubKeyY]
+    );
+    expect(await admin.getPasskeyId(cloned)).to.eq(keyId);
+  });
+
   it("should clone account", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
 
-    const cloned = await factory.predictClonedAddress(accountInitData);
+    const salt = hre.ethers.keccak256(accountInitData);
+    const cloned = await factory.predictClonedAddress(salt);
     await expect(
       factory.clone(accountInitData)
     ).to.emit(factory, "AccountDeployed").withArgs(cloned);
@@ -151,7 +176,8 @@ describe("OpenId3Account", function () {
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
       "initialize", [adminData, deployer.address]);
-    const account = await factory.predictClonedAddress(accountInitData);
+    const salt = hre.ethers.keccak256(accountInitData);
+    const account = await factory.predictClonedAddress(salt);
     const accountContract = OpenId3Account__factory.connect(account, tester1);
     await deposit(deployer, account);
 

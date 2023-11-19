@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./AccountProxy.sol";
 import "../interfaces/IAccountProxy.sol";
+import "../interfaces/IOpenId3Account.sol";
 
 contract AccountFactory {
     event AccountDeployed(address account);
@@ -18,6 +19,20 @@ contract AccountFactory {
         accountImpl = _accountImpl;
     }
 
+    function cloneWithAdminOnly(
+        bytes memory adminData
+    ) external returns (address proxy) {
+        bytes32 salt = keccak256(adminData);
+        proxy = Clones.cloneDeterministic(accountProxy, salt);
+        bytes memory accountData = abi.encodeWithSelector(
+            IOpenId3Account.initialize.selector,
+            adminData,
+            address(0)
+        );
+        IAccountProxy(proxy).initProxy(accountImpl, accountData);
+        emit AccountDeployed(proxy);
+    }
+
     function clone(
         bytes memory accountData
     ) external returns (address proxy) {
@@ -27,10 +42,11 @@ contract AccountFactory {
         emit AccountDeployed(proxy);
     }
 
-    function predictClonedAddress(
-        bytes memory accountData
-    ) external view returns(address) {
-        bytes32 salt = keccak256(accountData);
+    function predictClonedAddress(bytes32 salt)
+        external
+        view
+        returns(address)
+    {
         return Clones.predictDeterministicAddress(accountProxy, salt);
     }
 
