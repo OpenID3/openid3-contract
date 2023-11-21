@@ -15,7 +15,6 @@ export interface OidcZkProofInput {
     proof: string,
 }
 
-// export const AUD_SHA256 = "0x639d84aa3d96a6c1d4d140267fb9d209a412d8cd2de2702e3f309149ae2321ec";
 export const AUD_SHA256 = "0x63adebe476a0d4dfc02266fd4398280d7c50cc62137c3f7b7884a1255fc45238";
 
 export const buildZkAdminData = (
