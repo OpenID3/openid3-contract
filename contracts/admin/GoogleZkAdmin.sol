@@ -29,8 +29,6 @@ contract GoogleZkAdmin is AccountAdminBase {
     bytes32 constant public RSA_KEY_ID2 = hex"fd5e13b316764e193579ba553e91c5ec11c5557777bf8a9403dfdef308bf8519";
     bytes constant public RSA_N2 = hex"bd980f7fd9ebb8c618ef5ab9a604e10f09a4e99dc30fb73037e679dbffdbe311de63de7039e2a98d2962688f0ad4fa5e05b9b83729079ba5267c1fe90b0e4fda8c291d9f09105d8509e0c529c3ad64ece895856029963c4ae9eac5caf74a6d27ef78db19c3e0aaee4fa639ce4785a46429e9983119df828d41ab7f31860d519644d9195ba69a4d1e22dab5d88b5bead68bd6029a9b04e0421d77e5ca23266941944a68097ec3bd816e84c3fcaa2ad8290039939a6fbdd0fc6e45553d0daf1116a8fe9aaed55f8390dcfd554f9efb6c0bdc8c7bc94d814ddcddafa613ebf313da31023af4b3c124d0887fb2ff826d62fcc47888ecc3b28083c6fda42abcc84f69";
 
-    // sha256(bytes("https://accounts.google.com"))
-    bytes32 constant public ISS_SHA256 = hex"89a8000a68d759c68bfaeab5056d67342e97643511923e63702da58a9aac8f38";
     // sha256("")
     bytes32 constant public OUTPUT_SHA256_MASKED = hex"03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
@@ -45,12 +43,10 @@ contract GoogleZkAdmin is AccountAdminBase {
     }
 
     IPlonkVerifier immutable public plonkVerifier;
-    bytes32 immutable public audHash;
     mapping(address => bytes32) private _accounts;
 
-    constructor(address _plonkVerifier, bytes32 _audHash) {
+    constructor(address _plonkVerifier) {
         plonkVerifier = IPlonkVerifier(_plonkVerifier);
-        audHash = _audHash;
     }
 
     function linkAccount(bytes32 idHash) external onlyAdminMode {
@@ -94,15 +90,13 @@ contract GoogleZkAdmin is AccountAdminBase {
         }
 
         // 2. construct public inputs of proof
-        bytes32 userIdHash = getLinkedAccountHash(msg.sender);
+        bytes32 accountHash = getLinkedAccountHash(msg.sender);
         bytes32 inputHash = sha256(abi.encodePacked(
             data.input.jwtHeaderAndPayloadHash,
             data.input.kidHash, // kid
-            ISS_SHA256, // iss
-            audHash, // aud
             sha256(bytes(toHexString(uint256(challenge)))), // nonce
             sha256(bytes(data.input.iat)), // iat
-            userIdHash // sub
+            accountHash // iss+aud+sub
         ));
         bytes32 inputHashMasked = inputHash & MASK;
 
@@ -112,14 +106,14 @@ contract GoogleZkAdmin is AccountAdminBase {
         publicInputs[1] = uint256(inputHashMasked);
         publicInputs[2] = uint256(OUTPUT_SHA256_MASKED);
         if (plonkVerifier.verify(data.proof, publicInputs)) {
-            uint256 validUntil = stringToUint(data.input.iat) + JWT_TTL;
+            uint256 validUntil = _stringToUint(data.input.iat) + JWT_TTL;
             return validUntil << 160;
         } else {
             return 1;
         }
     }
 
-    function stringToUint(string memory s) internal pure returns (uint256 result) {
+    function _stringToUint(string memory s) internal pure returns (uint256 result) {
         bytes memory b = bytes(s);
         uint256 i;
         result = 0;

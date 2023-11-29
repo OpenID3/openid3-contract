@@ -1,7 +1,6 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import { deterministicDeploy, genBytecode } from "../lib/deployer";
-import { AUD_SHA256 } from "../lib/google";
 
 const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     await deterministicDeploy(
@@ -19,8 +18,8 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     );
 
     const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "bytes32"],
-        [deployed.address, AUD_SHA256],
+        ["address"],
+        [deployed.address],
     );
     const artifact = await hre.artifacts.readArtifact("GoogleZkAdmin");
     await deterministicDeploy(

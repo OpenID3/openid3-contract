@@ -15,8 +15,6 @@ export interface OidcZkProofInput {
     proof: string,
 }
 
-export const AUD_SHA256 = "0x63adebe476a0d4dfc02266fd4398280d7c50cc62137c3f7b7884a1255fc45238";
-
 export const buildZkAdminData = (
     admin: Contract,
     accountHash: string,

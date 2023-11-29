@@ -5,7 +5,6 @@ import {
   getEntryPointAddress,
   genBytecode
 } from './deployer';
-import { AUD_SHA256 } from './google';
 
 export async function getAbi(
     hre: HardhatRuntimeEnvironment,
@@ -54,8 +53,8 @@ export async function getPlonkVerifier(hre: HardhatRuntimeEnvironment) {
 export async function getGoogleZkAdmin(hre: HardhatRuntimeEnvironment) {
   const verifier = await getPlonkVerifier(hre);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "bytes32"],
-    [await verifier.getAddress(), AUD_SHA256]
+    ["address"],
+    [await verifier.getAddress()]
   );
   return await getDeployedContract(hre, "GoogleZkAdmin", args);
 }
