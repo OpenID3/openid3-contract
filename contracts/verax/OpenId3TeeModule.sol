@@ -2,10 +2,13 @@
 
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "linea-attestation-registry-contracts/src/abstracts/AbstractModule.sol";
 
 contract OpenId3TeeModule is AbstractModule {
+    using ECDSA for bytes32;
+
     error InvalidSchemaId();
     error AttestationExpired();
     error UnsupportedProvider();
@@ -44,7 +47,7 @@ contract OpenId3TeeModule is AbstractModule {
         bytes32 message = keccak256(abi.encode(accAndTypeHash, payload));
         if (!SignatureChecker.isValidSignatureNow(
               signer,
-              message,
+              message.toEthSignedMessageHash(),
               validationPayload)) {
           revert InvalidSignature();
         }

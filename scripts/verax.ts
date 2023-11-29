@@ -67,7 +67,7 @@ const MODULE_REGISTRY_ABI = [
     "function register(string, string, address)"
 ];
 // the address is deterministic across all chains
-const TEE_MODULE_ADDRESS = "0x457E4220342D086eEC0C70731d2128C1DC936796";
+const TEE_MODULE_ADDRESS = "0xA5112a2804C5Ed891F7415A5014C2C7602E7a24c";
 export async function registerModule() {
     const signer = getSigner();
     const contracts = getContracts();
@@ -95,12 +95,8 @@ const PORTAL_REGISTRY_ABI = [
 ];
 
 // Linea testnet:
-// tx: 0xffbd32152e5b019bf1a1324792d28638bceb4d086605397c213ed6fee5bc8a29
-// portal address: 0x899a09E88a0aB7df0A8D4893E20830632656637e
-
-// Linea mainnet:
-// tx: 0x0d9617a6e0e72ce80b31a7113ab2b8b3aba31872ca9888442eaac0a2ab856954
-// portal address: 0x9C6a396103763E18406E324dCf30d6013D336b4A
+// tx: 0x7156f9788390ea06cd4ad1a0ea4ff08f3c6e088cb4bad257d14a1e914885ffe8
+// portal address: 0x600866576bc0beBA463854F4B9DBE1DA07aF2567
 
 export async function registerPortal() {
     const signer = getSigner();
