@@ -50,7 +50,10 @@ export async function deterministicDeploy(
       const {deployer} = await hre.ethers.getNamedSigners();
       console.log("deployer: ", deployer.address);
       const data = ethers.solidityPacked(["bytes32", "bytes"], [salt, bytecode]);
-      const tx = await deployer.sendTransaction({ to: "0x4e59b44847b379578588920ca78fbf26c0b4956c", data});
+      const tx = await deployer.sendTransaction({
+        to: "0x4e59b44847b379578588920ca78fbf26c0b4956c",
+        data
+      });
       await tx.wait();
       console.log(`deploying ${contract} (tx: ${tx.hash})...: deployed at ${address}`);
       return { deployed: true, address };

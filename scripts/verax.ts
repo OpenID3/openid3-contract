@@ -52,7 +52,7 @@ export async function registerSchema() {
         "",
         SCHEMA,
         // {
-        //     gasPrice: ethers.parseUnits("3.6", "gwei"),
+        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
         // }
     );
     console.log("Registering schema: tx=", tx.hash);
@@ -66,6 +66,7 @@ export async function registerSchema() {
 const MODULE_REGISTRY_ABI = [
     "function register(string, string, address)"
 ];
+// the address is deterministic across all chains
 const TEE_MODULE_ADDRESS = "0x457E4220342D086eEC0C70731d2128C1DC936796";
 export async function registerModule() {
     const signer = getSigner();
@@ -80,7 +81,7 @@ export async function registerModule() {
         "",
         TEE_MODULE_ADDRESS,
         // {
-        //     gasPrice: ethers.parseUnits("3.6", "gwei"),
+        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
         // }
     );
     console.log("Registering module: tx=", tx.hash);
@@ -96,6 +97,10 @@ const PORTAL_REGISTRY_ABI = [
 // Linea testnet:
 // tx: 0xffbd32152e5b019bf1a1324792d28638bceb4d086605397c213ed6fee5bc8a29
 // portal address: 0x899a09E88a0aB7df0A8D4893E20830632656637e
+
+// Linea mainnet:
+// tx: 0x0d9617a6e0e72ce80b31a7113ab2b8b3aba31872ca9888442eaac0a2ab856954
+// portal address: 0x9C6a396103763E18406E324dCf30d6013D336b4A
 
 export async function registerPortal() {
     const signer = getSigner();
@@ -113,7 +118,7 @@ export async function registerPortal() {
         true,
         "openid3",
         // {
-        //     gasPrice: ethers.parseUnits("3.6", "gwei"),
+        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
         // }
     );
     console.log("Registering portal: tx=", tx.hash);
