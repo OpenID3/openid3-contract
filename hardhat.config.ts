@@ -18,14 +18,19 @@ const accounts = process.env.HARDHAT_DEPLOYER ?
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.20",
-    settings: {
-      viaIR: true,
-      optimizer: {
-        enabled: true,
-        runs: 1,
+    compilers: [
+      {
+        version: "0.8.21",
+        settings: {
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            runs: 1,
+          },
+        },
       },
-    },
+    ]
+    
   },
   networks: {
     sepolia: {
@@ -33,6 +38,16 @@ const config: HardhatUserConfig = {
       url: "https://ethereum-sepolia.publicnode.com",
       accounts,
     },
+    linea: {
+      chainId: 59144,
+      url: "https://linea-mainnet.infura.io/v3/" + process.env.INFURA_API_KEY!,
+      accounts,
+    },
+    linea_test: {
+      chainId: 59140,
+      url: "https://rpc.goerli.linea.build",
+      accounts,
+    }
   },
   gasReporter: {
     enabled: true,

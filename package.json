@@ -30,6 +30,9 @@
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@openzeppelin/contracts": "^4.2.0",
-    "base64url": "^3.0.1"
+    "@verax-attestation-registry/verax-sdk": "^0.0.15",
+    "base64url": "^3.0.1",
+    "linea-attestation-registry-contracts": "file:../linea-attestation-registry/contracts",
+    "openzeppelin-contracts": "^4.0.0"
   }
 }
