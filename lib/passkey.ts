@@ -5,6 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { secp256r1 } from "@noble/curves/p256";
 
 export interface Passkey {
+    id: string;
     privKey: Uint8Array,
     pubKey: Uint8Array,
     pubKeyX: bigint;
@@ -12,10 +13,11 @@ export interface Passkey {
 }
 
 export const genPasskey = () : Passkey => {
+    const id = crypto.randomBytes(32).toString("hex");
     const privKey = secp256r1.utils.randomPrivateKey();
     const pubKey = secp256r1.getPublicKey(privKey);
     const point = secp256r1.ProjectivePoint.fromPrivateKey(privKey);
-    return { privKey, pubKey, pubKeyX: point.x, pubKeyY: point.y };
+    return { privKey, pubKey, pubKeyX: point.x, pubKeyY: point.y, id };
 }
 
 export const buildPasskeyAdminData = (
@@ -26,7 +28,7 @@ export const buildPasskeyAdminData = (
       "setPasskey", [{
         pubKeyX: key.pubKeyX,
         pubKeyY: key.pubKeyY
-      }]
+      }, key.id]
     );
     return ethers.solidityPacked(
       ["address", "bytes"], [admin.target, adminData])

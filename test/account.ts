@@ -304,7 +304,11 @@ describe("OpenId3Account", function () {
       callFromPasskey(
         accountAddr, passkey, "0x", setAdminData, deployer)
     ).to.emit(admin, "PasskeySet").withArgs(
-      accountAddr, newKeyId, [passkey2.pubKeyX, passkey2.pubKeyY]);
+      accountAddr,
+      newKeyId,
+      [passkey2.pubKeyX, passkey2.pubKeyY],
+      passkey2.id,
+    );
 
     // operator cannot set admin via EIP-4337 execute, but the mode
     // will be updated since validateSignature is called
@@ -328,7 +332,11 @@ describe("OpenId3Account", function () {
       callFromPasskey(
         accountAddr, passkey2, "0x", executeData, deployer)
     ).to.emit(admin, "PasskeySet").withArgs(
-      accountAddr, keyId, [passkey.pubKeyX, passkey.pubKeyY]);
+      accountAddr,
+      keyId,
+      [passkey.pubKeyX, passkey.pubKeyY],
+      passkey.id,
+    );
   });
 
   it("should upgrade contract properly", async function () {
