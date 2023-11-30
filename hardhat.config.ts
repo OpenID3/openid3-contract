@@ -33,6 +33,10 @@ const config: HardhatUserConfig = {
     
   },
   networks: {
+    hardhat: {
+      live: false,
+      saveDeployments: false,
+    },
     sepolia: {
       chainId: 11155111,
       url: "https://ethereum-sepolia.publicnode.com",

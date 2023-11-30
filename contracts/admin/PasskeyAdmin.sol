@@ -11,7 +11,8 @@ contract PasskeyAdmin is AccountAdminBase {
     event PasskeySet(
         address indexed account,
         bytes32 indexed keyId,
-        Passkey pubKey
+        Passkey pubKey,
+        string passkeyId
     );
 
     struct PasskeyValidationData {
@@ -28,10 +29,13 @@ contract PasskeyAdmin is AccountAdminBase {
 
     mapping(address => bytes32) private _passkeys;
 
-    function setPasskey(Passkey calldata pubKey) external onlyAdminMode {
+    function setPasskey(
+        Passkey calldata pubKey,
+        string memory passkeyId
+    ) external onlyAdminMode {
         bytes32 keyId = _genKeyId(pubKey);
         _passkeys[msg.sender] = keyId;
-        emit PasskeySet(msg.sender, keyId, pubKey);
+        emit PasskeySet(msg.sender, keyId, pubKey, passkeyId);
     }
 
     function getPasskeyId(address account) external view returns(bytes32) {

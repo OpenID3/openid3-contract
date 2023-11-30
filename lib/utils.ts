@@ -50,6 +50,10 @@ export async function getPlonkVerifier(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "PlonkVerifier");
 }
 
+export async function getVeraxModule(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "OpenId3TeeModule");
+}
+
 export async function getGoogleZkAdmin(hre: HardhatRuntimeEnvironment) {
   const verifier = await getPlonkVerifier(hre);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(

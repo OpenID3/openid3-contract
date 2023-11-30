@@ -1,5 +1,6 @@
 import { Artifact, HardhatRuntimeEnvironment } from "hardhat/types";
-import { ethers } from "ethers";
+import { BigNumberish, TransactionRequest, ethers } from "ethers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 export function getEntryPointAddress() {
     return "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
@@ -36,7 +37,9 @@ export async function deterministicDeploy(
     hre: HardhatRuntimeEnvironment,
     contract: string,
     bytecode: string,
-    salt: string
+    salt: string,
+    deployer?: HardhatEthersSigner | ethers.Wallet,
+    gasPrice?: BigNumberish | bigint,
   ) : Promise<{address: string, deployed: boolean}> {
     const address = ethers.getCreate2Address(
       getDeterministicDeployer(),
@@ -47,13 +50,20 @@ export async function deterministicDeploy(
         console.log(`Reusing ${contract} deployed at ${address}`);
         return { deployed: false, address };
     } else {
-      const {deployer} = await hre.ethers.getNamedSigners();
+      if (!deployer) {
+        const signers = await hre.ethers.getNamedSigners();
+        deployer = signers.deployer;
+      }
       console.log("deployer: ", deployer.address);
       const data = ethers.solidityPacked(["bytes32", "bytes"], [salt, bytecode]);
-      const tx = await deployer.sendTransaction({
+      const txRequest = {
         to: "0x4e59b44847b379578588920ca78fbf26c0b4956c",
-        data
-      });
+        data,
+      } as TransactionRequest;
+      if (gasPrice) {
+        txRequest.gasPrice = gasPrice;
+      }
+      const tx = await deployer.sendTransaction(txRequest);
       await tx.wait();
       console.log(`deploying ${contract} (tx: ${tx.hash})...: deployed at ${address}`);
       return { deployed: true, address };

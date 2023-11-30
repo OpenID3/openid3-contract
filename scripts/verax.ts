@@ -19,8 +19,8 @@ const SCHEMA_REGISTRY_ABI = [
     "function getIdFromSchemaString(string memory schema) public pure returns (bytes32)",
 ];
 
-const SCHEMA = "string provider, string account";
-const SCHEMA_ID = "0x44a18728bda7ce4b5891c75a6e6d316f8d9020453bdf55754e63c1d3a85acee9";
+const SCHEMA = "bytes32 providerHash, bytes32 accountHash";
+const SCHEMA_ID = "0x912214269b9b891a0d7451974030ba13207d3bf78e515351609de9dd8a339686";
 
 function getContracts() {
     if (hre.network.name === "linea_test") {
@@ -46,14 +46,13 @@ export async function registerSchema() {
         SCHEMA_REGISTRY_ABI,
         signer,
     );
+    const feeData = await hre.ethers.provider.getFeeData();
     const tx = await schemaRegistry.createSchema(
         "openid3",
         "",
         "",
         SCHEMA,
-        // {
-        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
-        // }
+        {gasPrice: feeData.maxFeePerGas}
     );
     console.log("Registering schema: tx=", tx.hash);
     await tx.wait();
@@ -76,13 +75,12 @@ export async function registerModule() {
         MODULE_REGISTRY_ABI,
         signer,
     );
+    const feeData = await hre.ethers.provider.getFeeData();
     const tx = await moduleRegistry.register(
         "openid3",
         "",
         TEE_MODULE_ADDRESS,
-        // {
-        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
-        // }
+        {gasPrice: feeData.maxFeePerGas}
     );
     console.log("Registering module: tx=", tx.hash);
     await tx.wait();
@@ -107,15 +105,14 @@ export async function registerPortal() {
         PORTAL_REGISTRY_ABI,
         signer,
     );
+    const feeData = await hre.ethers.provider.getFeeData();
     const tx = await portalRegistry.deployDefaultPortal(
         [TEE_MODULE_ADDRESS],
         "openid3-portal",
         "openid3-portal",
         true,
         "openid3",
-        // {
-        //     gasPrice: ethers.parseUnits("2.7", "gwei"),
-        // }
+        {gasPrice: feeData.maxFeePerGas}
     );
     console.log("Registering portal: tx=", tx.hash);
     const receipt = await tx.wait();

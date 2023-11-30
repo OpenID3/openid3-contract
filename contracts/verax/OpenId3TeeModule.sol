@@ -10,19 +10,26 @@ contract OpenId3TeeModule is AbstractModule {
     using ECDSA for bytes32;
 
     error InvalidSchemaId();
-    error AttestationExpired();
     error UnsupportedProvider();
     error InvalidSignature();
+    error AlreadyAttested();
 
-    // keccak256("string provider, string account");
+    event Attested(bytes32 subjectHash, bytes32 accAndTypeHash);
+
+    // keccak256("bytes32 providerHash, bytes32 accountHash");
     bytes32 constant public SCHEMA_ID =
-        hex"44a18728bda7ce4b5891c75a6e6d316f8d9020453bdf55754e63c1d3a85acee9";
+        hex"912214269b9b891a0d7451974030ba13207d3bf78e515351609de9dd8a339686";
 
     // keccak256("google");
     bytes32 constant public GOOGLE_PROVIDER =
         hex"8f2f90d8304f6eb382d037c47a041d8c8b4d18bdd8b082fa32828e016a584ca7";
 
-    address public signer = 0xf3b4e49Fd77A959B704f6a045eeA92bd55b3b571;
+    address public immutable signer;
+    mapping(bytes32 => bytes32) private _attested;
+
+    constructor(address _signer) {
+        signer = _signer;
+    }
 
     function run(
         AttestationPayload memory attestationPayload,
@@ -33,23 +40,29 @@ contract OpenId3TeeModule is AbstractModule {
         if (attestationPayload.schemaId != SCHEMA_ID) {
             revert InvalidSchemaId();
         }
-        (string memory provider, string memory account) = abi.decode(
-            attestationPayload.attestationData,
-            (string, string)
-        );
-        if (keccak256(abi.encodePacked(provider)) != GOOGLE_PROVIDER) {
+        (bytes32 provider,) = abi.decode(
+            attestationPayload.attestationData, (bytes32, bytes32));
+        if (provider != GOOGLE_PROVIDER) {
             revert UnsupportedProvider();
         }
-        bytes32 accAndTypeHash = keccak256(
-            abi.encodePacked(provider, ":", account)
-        );
-        bytes32 payload = keccak256(attestationPayload.subject);
-        bytes32 message = keccak256(abi.encode(accAndTypeHash, payload));
+        bytes32 accAndTypeHash = keccak256(attestationPayload.attestationData);
+        bytes32 subjectHash = keccak256(attestationPayload.subject);
+        _validateAttested(accAndTypeHash, subjectHash);
+        bytes32 message = keccak256(abi.encode(accAndTypeHash, subjectHash));
         if (!SignatureChecker.isValidSignatureNow(
               signer,
               message.toEthSignedMessageHash(),
               validationPayload)) {
           revert InvalidSignature();
         }
+        emit Attested(subjectHash, accAndTypeHash);
+    }
+
+    function _validateAttested(bytes32 accAndTypeHash, bytes32 subjectHash) internal {
+        bytes32 linked = _attested[accAndTypeHash];
+        if (linked != bytes32(0)) {
+            revert AlreadyAttested();
+        }
+        _attested[accAndTypeHash] = subjectHash;
     }
 }
