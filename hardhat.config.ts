@@ -71,6 +71,8 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       sepolia: process.env.ETHERSCAN_API_KEY!,
+      linea: process.env.LINEASCAN_API_KEY!,
+      linea_test: process.env.LINEASCAN_API_KEY!,
     },
     customChains: [
       {
@@ -81,6 +83,22 @@ const config: HardhatUserConfig = {
           browserURL: "https://sepolia.etherscan.io"
         }
       },
+      {
+        network: "linea",
+        chainId: 59144,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build/"
+        }
+      },
+      {
+        network: "linea_test",
+        chainId: 59140,
+        urls: {
+          apiURL: "https://api-testnet.lineascan.build/api",
+          browserURL: "https://goerli.lineascan.build/"
+        }
+      }
     ]
   },
   paths: {
