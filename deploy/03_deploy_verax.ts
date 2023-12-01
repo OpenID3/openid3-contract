@@ -10,7 +10,7 @@ function getSigner(hre: HardhatRuntimeEnvironment) {
             fs.readFileSync(process.env.LOCAL_KEYS_PATH!, "utf8"));
         return new hre.ethers.Wallet(env.openid3, hre.ethers.provider);
     } else {
-        return 
+        throw new Error("Unsupported network");
     }
 }
 
