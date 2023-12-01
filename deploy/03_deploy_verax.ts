@@ -27,7 +27,7 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         genBytecode(await hre.artifacts.readArtifact("OpenId3TeeModule"), args),
         hre.ethers.ZeroHash,
         deployer,
-        feeData.maxFeePerGas!,
+        feeData.gasPrice!,
     );
 }
 

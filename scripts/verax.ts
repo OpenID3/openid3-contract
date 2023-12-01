@@ -16,9 +16,11 @@ const LINEA_CONTRACTS = {
     "attestation_reader": "0x40871e247CF6b8fd8794c9c56bB5c2b8a4FA3B6c",
 };
 
+const schema = "tuple(string,string,string,string)";
 const SCHEMA_REGISTRY_ABI = [
     "function createSchema(string, string, string, string)",
     "function getIdFromSchemaString(string memory schema) public pure returns (bytes32)",
+    `function getSchema(bytes32 schemaId) public view returns (${schema} memory)`
 ];
 
 const SCHEMA = "bytes32 providerHash, bytes32 accountHash";
@@ -42,6 +44,7 @@ function getSigner() {
 
 export async function registerSchema() {
     const signer = getSigner();
+    console.log("Signer: ", signer.address);
     const contracts = getContracts();
     const schemaRegistry = new ethers.Contract(
         contracts.schema_registry,
@@ -54,7 +57,7 @@ export async function registerSchema() {
         "",
         "",
         SCHEMA,
-        {gasPrice: feeData.maxFeePerGas}
+        {gasPrice: feeData.gasPrice!}
     );
     console.log("Registering schema: tx=", tx.hash);
     await tx.wait();
@@ -82,7 +85,7 @@ export async function registerModule() {
         "openid3",
         "",
         TEE_MODULE_ADDRESS,
-        {gasPrice: feeData.maxFeePerGas}
+        {gasPrice: feeData.gasPrice}
     );
     console.log("Registering module: tx=", tx.hash);
     await tx.wait();
@@ -92,6 +95,7 @@ export async function registerModule() {
 const PORTAL_REGISTRY_ABI = [
     "event PortalRegistered(string name, string description, address portalAddress)",
     "function deployDefaultPortal(address[], string, string, bool, string)",
+    "function isIssuer(address) public view returns (bool)",
 ];
 
 // Linea testnet:
@@ -114,7 +118,7 @@ export async function registerPortal() {
         "openid3-portal",
         true,
         "openid3",
-        {gasPrice: feeData.maxFeePerGas}
+        {gasPrice: feeData.gasPrice}
     );
     console.log("Registering portal: tx=", tx.hash);
     const receipt = await tx.wait();
@@ -142,7 +146,21 @@ export async function getAttestation() {
     console.log("Attestation: ", attestation);
 }
 
+export async function checkIssuer() {
+    const signer = getSigner();
+    const contracts = getContracts();
+    console.log("Portal Registry: ", contracts.portal_registry);
+    const portalRegistry = new ethers.Contract(
+        contracts.portal_registry,
+        PORTAL_REGISTRY_ABI,
+        signer,
+    );
+    const isIssuer = await portalRegistry.isIssuer(signer.address);
+    console.log(`Is Issuer: ${signer.address}=${isIssuer}`);
+}
+
 // registerSchema();
 // registerModule();
 // registerPortal();
 // getAttestation();
+// checkIssuer();
