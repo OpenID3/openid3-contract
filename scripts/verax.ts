@@ -6,12 +6,14 @@ const LINEA_TEST_CONTRACTS = {
     "schema_registry": "0xB2c4Da1f8F08A0CA25862509E5431289BE2b598B",
     "module_registry": "0x1a20b2CFA134686306436D2c9f778D7eC6c43A43",
     "portal_registry": "0x506f88a5Ca8D5F001f2909b029738A40042e42a6",
+    "attestation_reader": "0x65c8294C7aF0f0bDDe51eF92AF850613bb629fc6",
 };
 
 const LINEA_CONTRACTS = {
     "schema_registry": "0x0f95dCec4c7a93F2637eb13b655F2223ea036B59",
     "module_registry": "0xf851513A732996F22542226341748f3C9978438f",
     "portal_registry": "0xd5d61e4ECDf6d46A63BfdC262af92544DFc19083",
+    "attestation_reader": "0x40871e247CF6b8fd8794c9c56bB5c2b8a4FA3B6c",
 };
 
 const SCHEMA_REGISTRY_ABI = [
@@ -122,6 +124,25 @@ export async function registerPortal() {
     });
 }
 
+const EASAttestation = "tuple(bytes32,bytes32,uint64,uint64,uint64,bytes32,address,address,bool,bytes)";
+const ATTESTATION_READER_ABI = [
+    `function getAttestation(bytes32 uid) public view returns (${EASAttestation})`,
+];
+export async function getAttestation() {
+    const signer = getSigner();
+    const contracts = getContracts();
+    console.log("Attestation reader: ", contracts.attestation_reader);
+    const attestationReader = new ethers.Contract(
+        contracts.attestation_reader,
+        ATTESTATION_READER_ABI,
+        signer,
+    );
+    const attestation = await attestationReader.getAttestation(
+        "0x0000000000000000000000000000000000000000000000000000000000001627");
+    console.log("Attestation: ", attestation);
+}
+
 // registerSchema();
 // registerModule();
 // registerPortal();
+// getAttestation();
