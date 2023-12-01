@@ -14,7 +14,7 @@ contract OpenId3TeeModule is AbstractModule {
     error InvalidSignature();
     error AlreadyAttested();
 
-    event Attested(bytes32 subjectHash, bytes32 accAndTypeHash);
+    event Attested(bytes32 indexed accAndTypeHash, bytes subject);
 
     // keccak256("bytes32 providerHash, bytes32 accountHash");
     bytes32 constant public SCHEMA_ID =
@@ -25,7 +25,7 @@ contract OpenId3TeeModule is AbstractModule {
         hex"8f2f90d8304f6eb382d037c47a041d8c8b4d18bdd8b082fa32828e016a584ca7";
 
     address public immutable signer;
-    mapping(bytes32 => bytes32) private _attested;
+    mapping(bytes32 => bool) private _attested;
 
     constructor(address _signer) {
         signer = _signer;
@@ -45,24 +45,28 @@ contract OpenId3TeeModule is AbstractModule {
         if (provider != GOOGLE_PROVIDER) {
             revert UnsupportedProvider();
         }
-        bytes32 accAndTypeHash = keccak256(attestationPayload.attestationData);
-        bytes32 subjectHash = keccak256(attestationPayload.subject);
-        _validateAttested(accAndTypeHash, subjectHash);
-        bytes32 message = keccak256(abi.encode(accAndTypeHash, subjectHash));
+        bytes32 message = keccak256(
+            abi.encodePacked(
+                attestationPayload.attestationData,
+                attestationPayload.subject
+            )
+        );
+        bytes32 accAndTypeHash = keccak256(
+            attestationPayload.attestationData);
+        _validateAttested(accAndTypeHash);
         if (!SignatureChecker.isValidSignatureNow(
               signer,
               message.toEthSignedMessageHash(),
               validationPayload)) {
           revert InvalidSignature();
         }
-        emit Attested(subjectHash, accAndTypeHash);
+        emit Attested(accAndTypeHash, attestationPayload.subject);
     }
 
-    function _validateAttested(bytes32 accAndTypeHash, bytes32 subjectHash) internal {
-        bytes32 linked = _attested[accAndTypeHash];
-        if (linked != bytes32(0)) {
+    function _validateAttested(bytes32 accAndTypeHash) internal {
+        if (_attested[accAndTypeHash]) {
             revert AlreadyAttested();
         }
-        _attested[accAndTypeHash] = subjectHash;
+        _attested[accAndTypeHash] = true;
     }
 }

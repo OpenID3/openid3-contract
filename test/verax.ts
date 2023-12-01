@@ -5,7 +5,7 @@ import { expect } from "chai";
 
 const GOOGLE = ethers.keccak256(ethers.toUtf8Bytes("google"));
 const GITHUB = ethers.keccak256(ethers.toUtf8Bytes("github"));
-const accountHash = ethers.keccak256(ethers.toUtf8Bytes("alice@gmail.com"));
+const accountHash = ethers.keccak256(ethers.toUtf8Bytes("103782812893820927451"));
 const SCHEMA_ID = "0x912214269b9b891a0d7451974030ba13207d3bf78e515351609de9dd8a339686";
 const expirationDate = 0;
 
@@ -33,12 +33,11 @@ describe("OpenId3TeeModule", function () {
       [GOOGLE, accountHash]
     );
     const accAndTypeHash = ethers.keccak256(attestationData);
-
     const subject = deployer.address;
-    const subjectHash = ethers.keccak256(subject);
+
     const signedMessage = ethers.solidityPackedKeccak256(
-      ["bytes32", "bytes32"],
-      [accAndTypeHash, subjectHash]
+      ["bytes32", "bytes32", "bytes20"],
+      [GOOGLE, accountHash, subject]
     );
     const signature = await deployer.signMessage(
       ethers.getBytes(signedMessage));
@@ -82,7 +81,7 @@ describe("OpenId3TeeModule", function () {
         attestationData,
     }, signature, hre.ethers.ZeroAddress, 0)).to.emit(
       veraxModule, "Attested"
-    ).withArgs(subjectHash, accAndTypeHash);
+    ).withArgs(accAndTypeHash, subject.toLowerCase());
   
     await expect(veraxModule.run({
         schemaId: SCHEMA_ID,
