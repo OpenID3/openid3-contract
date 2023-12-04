@@ -22,9 +22,10 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         hre.ethers.ZeroHash,
     );
 
+    const {deployer} = await hre.ethers.getNamedSigners();
     const factoryArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "address"],
-        [proxy.address, impl.address]
+        ["address", "address", "address"],
+        [deployer.address, proxy.address, impl.address]
     );
     await deterministicDeploy(
         hre,

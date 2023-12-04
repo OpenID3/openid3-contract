@@ -12,6 +12,7 @@ import {
   ERC20ForTest__factory,
   ERC721ForTest__factory,
   ERC1155ForTest__factory,
+  AccountFactory__factory,
 } from "../types";
 import {
   genPasskey,
@@ -21,6 +22,8 @@ import {
 } from "../lib/passkey";
 import { genInitCode, callAsOperator, } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { getEntryPointAddress } from "../lib/deployer";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("OpenId3Account", function () {
   let entrypoint: Contract;
@@ -520,5 +523,45 @@ describe("OpenId3Account", function () {
       accountAddr, accountAddr, tester1.address, 1, 10);
     expect(await erc1155.balanceOf(accountAddr, 1)).to.eq(10);
     expect(await erc1155.balanceOf(tester1.address, 1)).to.eq(10);
+  });
+
+  it.only("Should stake with factory", async function () {
+    const { deployer, tester1 } = await hre.ethers.getNamedSigners();
+    const factoryAddr = await factory.getAddress();
+    const accFactory = AccountFactory__factory.connect(
+      factoryAddr, deployer);
+
+    // add stake
+    await accFactory.connect(tester1).addStake(
+      getEntryPointAddress(),
+      86400,
+      {value: hre.ethers.parseEther("0.05")}
+    );
+    const [,,stake,delay,] = await entrypoint.getDepositInfo(factoryAddr);
+    expect(stake).to.eq(hre.ethers.parseEther("0.05"));
+    expect(delay).to.eq(86400);
+
+    // unlock stake
+    await expect(
+      accFactory.connect(tester1).unlockStake(getEntryPointAddress())
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+    await accFactory.connect(deployer).unlockStake(getEntryPointAddress());
+
+    // withdraw stake
+    await expect(
+      accFactory.connect(tester1).withdrawStake(
+        getEntryPointAddress(), hre.ethers.ZeroAddress)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+
+    await expect(
+      accFactory.connect(deployer).withdrawStake(
+        getEntryPointAddress(), hre.ethers.ZeroAddress)
+    ).to.be.revertedWith("Stake withdrawal is not due");
+
+    await time.increase(90000);
+    await accFactory.connect(deployer).withdrawStake(
+        getEntryPointAddress(), hre.ethers.ZeroAddress);
+    const balance = await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress);
+    expect(balance).to.eq(hre.ethers.parseEther("0.05"));
   });
 });
