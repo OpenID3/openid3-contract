@@ -525,7 +525,7 @@ describe("OpenId3Account", function () {
     expect(await erc1155.balanceOf(tester1.address, 1)).to.eq(10);
   });
 
-  it.only("Should stake with factory", async function () {
+  it("Should stake with factory", async function () {
     const { deployer, tester1 } = await hre.ethers.getNamedSigners();
     const factoryAddr = await factory.getAddress();
     const accFactory = AccountFactory__factory.connect(
