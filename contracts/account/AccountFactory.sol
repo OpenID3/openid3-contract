@@ -4,23 +4,17 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "./EntryPointStaker.sol";
 import "./AccountProxy.sol";
 import "../interfaces/IAccountProxy.sol";
 import "../interfaces/IOpenId3Account.sol";
 
-contract AccountFactory is EntryPointStaker {
+contract AccountFactory {
     event AccountDeployed(address account);
 
     address public immutable accountProxy;
     address public immutable accountImpl;
 
-    constructor(
-        address owner,
-        address _accountProxy,
-        address _accountImpl
-    ) {
-        _transferOwnership(owner);
+    constructor(address _accountProxy, address _accountImpl) {
         accountProxy = _accountProxy;
         accountImpl = _accountImpl;
     }
