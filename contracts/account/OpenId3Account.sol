@@ -19,6 +19,7 @@ library OpenId3AccountStorage {
         keccak256('openid3.account');
  
     struct Layout {
+        bytes32 metadata; // the ipfs hash of the metadata
         address admin;
         address operator;
         uint8 mode;
@@ -49,6 +50,7 @@ contract OpenId3Account is
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
     event NewOperator(address indexed oldOwner, address indexed newOwner);
+    event NewNPub(bytes32 indexed oldNpub, bytes32 indexed newNpub);
 
     IEntryPoint private immutable _entryPoint;
 
@@ -67,10 +69,12 @@ contract OpenId3Account is
 
     function initialize(
         bytes calldata adminData,
-        address operator
+        address operator,
+        bytes32 metadata
     ) public override virtual initializer {
         _setAdmin(adminData);
         _setOperator(operator);
+        _setMetadata(metadata);
     }
 
     function getMode() external override view returns(uint8) {
@@ -85,16 +89,26 @@ contract OpenId3Account is
         return OpenId3AccountStorage.layout().operator;
     }
 
-    // both operator and admin are allowed to update operator
-    function setOperator(address newOperator) external {
-        _guard(true);
-        _setOperator(newOperator);
+    function getMetadata() external view returns(bytes32) {
+        return OpenId3AccountStorage.layout().metadata;
     }
 
     // only admin is allowed to update admin status
     function setAdmin(bytes calldata adminData) external {
         _guard(true);
         _setAdmin(adminData);
+    }
+
+    // only admin is allowed to update operator
+    function setOperator(address newOperator) external {
+        _guard(true);
+        _setOperator(newOperator);
+    }
+
+    // both admin and operator is allowed to update the metadata
+    function setMetadata(bytes32 metadata) external {
+        _guard(false);
+        _setMetadata(metadata);
     }
 
     /** UUPSUpgradeable */
@@ -184,6 +198,12 @@ contract OpenId3Account is
         address oldOperator = OpenId3AccountStorage.layout().operator;
         OpenId3AccountStorage.layout().operator = newOperator;
         emit NewOperator(oldOperator, newOperator);
+    }
+
+    function _setMetadata(bytes32 metadata) internal {
+        bytes32 oldMetadata = OpenId3AccountStorage.layout().metadata;
+        OpenId3AccountStorage.layout().metadata = metadata;
+        emit NewNPub(oldMetadata, metadata);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {

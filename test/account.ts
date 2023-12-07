@@ -22,6 +22,8 @@ import {
 import { genInitCode, callAsOperator, } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+const metadata = hre.ethers.encodeBytes32String("metadata");
+
 describe("OpenId3Account", function () {
   let entrypoint: Contract;
   let admin: Contract;
@@ -65,7 +67,7 @@ describe("OpenId3Account", function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
-      "initialize", [adminData, deployer.address]);
+      "initialize", [adminData, deployer.address, metadata]);
     const salt = hre.ethers.keccak256(accountInitData);
     return await factory.predictClonedAddress(salt);
   }
@@ -77,7 +79,7 @@ describe("OpenId3Account", function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
-      "initialize", [adminData, deployer.address]);
+      "initialize", [adminData, deployer.address, metadata]);
     const salt = hre.ethers.keccak256(accountInitData);
     const cloned = await factory.predictClonedAddress(salt);
     await deposit(deployer, cloned);
@@ -106,7 +108,7 @@ describe("OpenId3Account", function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
-      "initialize", [adminData, deployer.address]);
+      "initialize", [adminData, deployer.address, metadata]);
 
     const deployed = await factory.predictDeployedAddress(accountInitData);
     await expect(
@@ -117,6 +119,7 @@ describe("OpenId3Account", function () {
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
     expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getMetadata()).to.eq(metadata);
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -139,6 +142,7 @@ describe("OpenId3Account", function () {
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
     expect(await account.getOperator()).to.eq(hre.ethers.ZeroAddress);
+    expect(await account.getMetadata()).to.eq(hre.ethers.ZeroHash);
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -151,7 +155,7 @@ describe("OpenId3Account", function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
-      "initialize", [adminData, deployer.address]);
+      "initialize", [adminData, deployer.address, metadata]);
 
     const salt = hre.ethers.keccak256(accountInitData);
     const cloned = await factory.predictClonedAddress(salt);
@@ -175,7 +179,7 @@ describe("OpenId3Account", function () {
     const { deployer, tester1 } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData(
-      "initialize", [adminData, deployer.address]);
+      "initialize", [adminData, deployer.address, metadata]);
     const salt = hre.ethers.keccak256(accountInitData);
     const account = await factory.predictClonedAddress(salt);
     const accountContract = OpenId3Account__factory.connect(account, tester1);
