@@ -150,5 +150,5 @@ export async function callAsOperator(
   const userOpHash = await genUserOpHash(userOp);
   const signature = await operator.signMessage(ethers.getBytes(userOpHash));
   userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [1, signature]);
-  return await callWithEntryPoint(userOp, signer, log ?? false);
+  return callWithEntryPoint(userOp, signer, log ?? false);
 }

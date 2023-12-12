@@ -11,9 +11,11 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
 
-import "../interfaces/IAccountAdmin.sol";
+import "../interfaces/IAccountValidator.sol";
 import "../interfaces/IAccountMetadata.sol";
 import "../interfaces/IOpenId3Account.sol";
+
+import "hardhat/console.sol";
 
 library OpenId3AccountStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("openid3.account");
@@ -152,28 +154,19 @@ contract OpenId3Account is
         if (mode == 0x00) {
             // admin mode
             address admin = OpenId3AccountStorage.layout().admin;
-            return
-                _validateAdminSignature(
-                    admin,
-                    userOpHash,
-                    userOp.signature[1:]
-                );
+            return _validateSignature(admin, userOpHash, userOp.signature[1:]);
         } else if (mode == 0x01) {
             // operator mode
             uint256 operator = uint256(OpenId3AccountStorage.layout().operator);
-            if (
-                _validateSig(
+            return
+                SignatureChecker.isValidSignatureNow(
                     address(uint160(operator)),
-                    userOpHash,
+                    userOpHash.toEthSignedMessageHash(),
                     userOp.signature[1:]
                 )
-            ) {
-                return
-                    operator &
-                    0xffffffffffff00000000000000000000000000000000000000000000000000;
-            } else {
-                return 1;
-            }
+                    ? operator &
+                        0xffffffffffffffffffffffff0000000000000000000000000000000000000000
+                    : 1;
         } else {
             revert InvalidMode(mode);
         }
@@ -230,32 +223,35 @@ contract OpenId3Account is
         }
     }
 
-    function _validateAdminSignature(
+    function _isValidator(address signer) internal view returns (bool) {
+        return
+            signer.isContract() &&
+            IERC165(signer).supportsInterface(
+                type(IAccountValidator).interfaceId
+            );
+    }
+
+    function _validateSignature(
         address signer,
         bytes32 userOpHash,
         bytes calldata signature
     ) internal view returns (uint256) {
-        if (
-            signer.isContract() &&
-            IERC165(signer).supportsInterface(type(IAccountAdmin).interfaceId)
-        ) {
+        if (_isValidator(signer)) {
             return
-                IAccountAdmin(signer).validateSignature(userOpHash, signature);
+                IAccountValidator(signer).validateSignature(
+                    userOpHash,
+                    signature
+                );
+        } else {
+            return
+                SignatureChecker.isValidSignatureNow(
+                    signer,
+                    userOpHash.toEthSignedMessageHash(),
+                    signature
+                )
+                    ? 0
+                    : 1;
         }
-        return _validateSig(signer, userOpHash, signature) ? 0 : 1;
-    }
-
-    function _validateSig(
-        address signer,
-        bytes32 userOpHash,
-        bytes calldata signature
-    ) internal view returns (bool) {
-        return
-            SignatureChecker.isValidSignatureNow(
-                signer,
-                userOpHash.toEthSignedMessageHash(),
-                signature
-            );
     }
 
     // All non-view external functions must be guarded by this function.

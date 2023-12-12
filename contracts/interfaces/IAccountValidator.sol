@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-interface IAccountAdmin {
+interface IAccountValidator {
     function validateSignature(
         bytes32 challenge,
         bytes calldata signature

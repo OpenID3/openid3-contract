@@ -43,7 +43,7 @@ describe("OpenId3Account", function () {
   const buildOperator = (
     signer: HardhatEthersSigner,
     validAfter?: number,
-    validUntil?: number,
+    validUntil?: number
   ) => {
     return hre.ethers.solidityPacked(
       ["uint48", "uint48", "address"],
@@ -494,6 +494,24 @@ describe("OpenId3Account", function () {
     expect(await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress)).to.eq(
       ethAmount
     );
+
+    // reset operator with expired timestamp
+    const epoch = Math.floor(Date.now() / 1000);
+    const operator = buildOperator(deployer, 0, epoch - 1800);
+    const setOperatorData = account.interface.encodeFunctionData(
+      "setOperator",
+      [operator]
+    );
+    await expect(
+      callFromPasskey(accountAddr, passkey, "0x", setOperatorData, tester1)
+    )
+      .to.emit(account, "NewOperator")
+      .withArgs(buildOperator(deployer), operator);
+    expect(await account.getOperator()).to.eq(operator);
+    expect(await account.getMode()).to.eq(0); // admin mode
+    await expect(
+      callAsOperator(accountAddr, deployer, "0x", executeData, tester1)
+    ).to.be.revertedWithCustomError(entrypoint, "FailedOp");
   });
 
   it("Should hold and transfer ERC721 successfully", async function () {
