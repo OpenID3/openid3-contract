@@ -51,10 +51,28 @@ contract OpenId3Account is
 
     IEntryPoint private immutable _entryPoint;
     IAccountManager private immutable _manager;
+    address private immutable _defaultAdmin;
 
-    constructor(address entryPoint_, address manager) {
+    modifier onlyEntryPointOrSelf() {
+        if (
+            msg.sender != address(entryPoint()) && msg.sender != address(this)
+        ) {
+            revert NotAuthorized();
+        }
+        _;
+    }
+
+    modifier onlyAdmin() {
+        if (OpenId3AccountStorage.layout().mode != 0x00) {
+            revert OnlyAdminAllowed();
+        }
+        _;
+    }
+
+    constructor(address entryPoint_, address defaultAdmin, address manager) {
         _entryPoint = IEntryPoint(entryPoint_);
-        _manager = IAccountValidatorManager(manager);
+        _manager = IAccountManager(manager);
+        _defaultAdmin = defaultAdmin;
         _disableInitializers();
     }
 
@@ -68,20 +86,21 @@ contract OpenId3Account is
 
     function initialize(
         bytes calldata adminData,
-        uint256 operator,
+        uint256 validator,
         bytes calldata metadata
     ) public virtual override initializer {
         _setAdmin(adminData);
-        manager.grant(validator);
-        manager.setMetadata(metadata);
+        _manager.grant(validator);
+        _manager.setMetadata(metadata);
     }
 
     function getMode() external view override returns (uint8) {
         return OpenId3AccountStorage.layout().mode;
     }
 
-    function getAdmin() external view override returns (address) {
-        return OpenId3AccountStorage.layout().admin;
+    function getAdmin() public view override returns (address) {
+        address admin = OpenId3AccountStorage.layout().admin;
+        return admin == address(0) ? _defaultAdmin : admin;
     }
 
     function getAccountManager() external view returns (address) {
@@ -89,8 +108,9 @@ contract OpenId3Account is
     }
 
     // only admin is allowed to update admin status
-    function setAdmin(bytes calldata adminData) external {
-        _guard(true);
+    function setAdmin(
+        bytes calldata adminData
+    ) external onlyEntryPointOrSelf onlyAdmin {
         _setAdmin(adminData);
     }
 
@@ -98,9 +118,7 @@ contract OpenId3Account is
 
     function _authorizeUpgrade(
         address /* newImplementation */
-    ) internal view override {
-        _guard(true);
-    }
+    ) internal view override onlyEntryPointOrSelf onlyAdmin {}
 
     function implementation() external view returns (address) {
         return _getImplementation();
@@ -112,8 +130,7 @@ contract OpenId3Account is
         address dest,
         uint256 value,
         bytes calldata func
-    ) external {
-        _guard(false);
+    ) external onlyEntryPointOrSelf {
         _call(dest, value, func);
     }
 
@@ -121,8 +138,7 @@ contract OpenId3Account is
         address[] calldata dest,
         uint256[] memory value,
         bytes[] calldata func
-    ) external {
-        _guard(false);
+    ) external onlyEntryPointOrSelf {
         if (dest.length != value.length || value.length != func.length) {
             revert WrongArrayLength();
         }
@@ -162,8 +178,7 @@ contract OpenId3Account is
     function withdrawDepositTo(
         address payable withdrawAddress,
         uint256 amount
-    ) external {
-        _guard(false);
+    ) external onlyEntryPointOrSelf {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
@@ -174,17 +189,11 @@ contract OpenId3Account is
         if (adminData.length > 20) {
             _call(newAdmin, 0, adminData[20:]);
         }
-        address oldAdmin = OpenId3AccountStorage.layout().admin;
+        address oldAdmin = getAdmin();
         if (oldAdmin != newAdmin) {
             OpenId3AccountStorage.layout().admin = newAdmin;
             emit NewAdmin(oldAdmin, newAdmin);
         }
-    }
-
-    function _setOperator(bytes32 newOperator) internal {
-        bytes32 oldOperator = OpenId3AccountStorage.layout().operator;
-        OpenId3AccountStorage.layout().operator = newOperator;
-        emit NewOperator(oldOperator, newOperator);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
@@ -224,28 +233,6 @@ contract OpenId3Account is
                 )
                     ? 0
                     : 1;
-        }
-    }
-
-    // All non-view external functions must be guarded by this function.
-    // We allow only four external callers:
-    // 1. entryPoint: In this case, we don't need to update the mode
-    //    since it's already set by the _validateSignature, but we
-    //    need to check if only admin is allowed
-    // 2. address(this): In this case, we don't need to update the mode
-    //    since it's already set by the initial entry point call, but we
-    //    need to check if only admin is allowed
-    //
-    // If onlyAdmin is true, we only allow admin to call
-    function _guard(bool onlyAdmin) internal view {
-        if (
-            msg.sender == address(entryPoint()) || msg.sender == address(this)
-        ) {
-            if (onlyAdmin && OpenId3AccountStorage.layout().mode != 0x00) {
-                revert OnlyAdminAllowed();
-            }
-        } else {
-            revert NotAuthorized();
         }
     }
 }

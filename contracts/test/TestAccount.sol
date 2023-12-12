@@ -24,13 +24,13 @@ contract TestAccount is IOpenId3Account, Ownable {
         return owner();
     }
 
-    function getOperator() external view returns(bytes32) {
-        return bytes32(uint256(uint160(owner())));
+    function getAccountManager() external view returns(address) {
+        return owner();
     }
 
     function initialize(
         bytes calldata /** adminData **/,
-        bytes32 /* owner */,
+        uint256 /* owner */,
         bytes calldata /* metadata */
     ) external pure {
         return;

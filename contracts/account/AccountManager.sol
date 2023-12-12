@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "../interfaces/IAccountManager.sol";
-import "./AccountAdminBase.sol";
+import "../admin/AccountAdminBase.sol";
 
 contract AccountManager is IAccountManager, AccountAdminBase {
     using ECDSA for bytes32;
@@ -19,9 +19,7 @@ contract AccountManager is IAccountManager, AccountAdminBase {
         emit Grant(msg.sender, validator);
     }
 
-    function revoke(
-        uint256 validator
-    ) external override onlyAdminMode {
+    function revoke(uint256 validator) external override onlyAdminMode {
         _acls[msg.sender].remove(validator);
         emit Revoke(msg.sender, validator);
     }

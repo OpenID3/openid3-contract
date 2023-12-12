@@ -33,7 +33,7 @@ contract AccountFactory {
         bytes memory accountData = abi.encodeWithSelector(
             IOpenId3Account.initialize.selector,
             adminData,
-            bytes32(0),
+            0,
             bytes("") // metadata
         );
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
