@@ -12,16 +12,13 @@ import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
 
 import "../interfaces/IAccountValidator.sol";
-import "../interfaces/IAccountMetadata.sol";
+import "../interfaces/IAccountManager.sol";
 import "../interfaces/IOpenId3Account.sol";
-
-import "hardhat/console.sol";
 
 library OpenId3AccountStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("openid3.account");
 
     struct Layout {
-        bytes32 operator;
         address admin;
         uint8 mode;
     }
@@ -36,7 +33,6 @@ library OpenId3AccountStorage {
 
 contract OpenId3Account is
     IOpenId3Account,
-    IAccountMetadata,
     BaseAccount,
     TokenCallbackHandler,
     UUPSUpgradeable,
@@ -54,9 +50,11 @@ contract OpenId3Account is
     event NewOperator(bytes32 indexed oldOperator, bytes32 indexed newOperator);
 
     IEntryPoint private immutable _entryPoint;
+    IAccountManager private immutable _manager;
 
-    constructor(address entryPoint_) {
+    constructor(address entryPoint_, address manager) {
         _entryPoint = IEntryPoint(entryPoint_);
+        _manager = IAccountValidatorManager(manager);
         _disableInitializers();
     }
 
@@ -70,12 +68,12 @@ contract OpenId3Account is
 
     function initialize(
         bytes calldata adminData,
-        bytes32 operator,
+        uint256 operator,
         bytes calldata metadata
     ) public virtual override initializer {
         _setAdmin(adminData);
-        _setOperator(operator);
-        _setMetadata(metadata);
+        manager.grant(validator);
+        manager.setMetadata(metadata);
     }
 
     function getMode() external view override returns (uint8) {
@@ -86,26 +84,14 @@ contract OpenId3Account is
         return OpenId3AccountStorage.layout().admin;
     }
 
-    function getOperator() external view override returns (bytes32) {
-        return OpenId3AccountStorage.layout().operator;
+    function getAccountManager() external view returns (address) {
+        return address(_manager);
     }
 
     // only admin is allowed to update admin status
     function setAdmin(bytes calldata adminData) external {
         _guard(true);
         _setAdmin(adminData);
-    }
-
-    // only admin is allowed to update operator
-    function setOperator(bytes32 newOperator) external {
-        _guard(true);
-        _setOperator(newOperator);
-    }
-
-    // both admin and operator is allowed to update the metadata
-    function setMetadata(bytes calldata metadata) public override {
-        _guard(false);
-        _setMetadata(metadata);
     }
 
     /** UUPSUpgradeable */
@@ -157,16 +143,7 @@ contract OpenId3Account is
             return _validateSignature(admin, userOpHash, userOp.signature[1:]);
         } else if (mode == 0x01) {
             // operator mode
-            uint256 operator = uint256(OpenId3AccountStorage.layout().operator);
-            return
-                SignatureChecker.isValidSignatureNow(
-                    address(uint160(operator)),
-                    userOpHash.toEthSignedMessageHash(),
-                    userOp.signature[1:]
-                )
-                    ? operator &
-                        0xffffffffffffffffffffffff0000000000000000000000000000000000000000
-                    : 1;
+            return _manager.validateSignature(userOpHash, userOp.signature[1:]);
         } else {
             revert InvalidMode(mode);
         }
@@ -208,10 +185,6 @@ contract OpenId3Account is
         bytes32 oldOperator = OpenId3AccountStorage.layout().operator;
         OpenId3AccountStorage.layout().operator = newOperator;
         emit NewOperator(oldOperator, newOperator);
-    }
-
-    function _setMetadata(bytes calldata metadata) internal {
-        emit NewMetadata(metadata);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
