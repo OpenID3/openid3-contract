@@ -12,6 +12,7 @@ import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
 
 import "../interfaces/IAccountAdmin.sol";
+import "../interfaces/IAccountMetadata.sol";
 import "../interfaces/IOpenId3Account.sol";
 
 library OpenId3AccountStorage {
@@ -19,7 +20,6 @@ library OpenId3AccountStorage {
         keccak256('openid3.account');
  
     struct Layout {
-        bytes32 metadata; // the ipfs hash of the metadata
         address admin;
         address operator;
         uint8 mode;
@@ -35,6 +35,7 @@ library OpenId3AccountStorage {
 
 contract OpenId3Account is
     IOpenId3Account,
+    IAccountMetadata,
     BaseAccount,
     TokenCallbackHandler,
     UUPSUpgradeable,
@@ -50,7 +51,6 @@ contract OpenId3Account is
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
     event NewOperator(address indexed oldOwner, address indexed newOwner);
-    event NewNPub(bytes32 indexed oldNpub, bytes32 indexed newNpub);
 
     IEntryPoint private immutable _entryPoint;
 
@@ -70,7 +70,7 @@ contract OpenId3Account is
     function initialize(
         bytes calldata adminData,
         address operator,
-        bytes32 metadata
+        bytes calldata metadata
     ) public override virtual initializer {
         _setAdmin(adminData);
         _setOperator(operator);
@@ -89,10 +89,6 @@ contract OpenId3Account is
         return OpenId3AccountStorage.layout().operator;
     }
 
-    function getMetadata() external view returns(bytes32) {
-        return OpenId3AccountStorage.layout().metadata;
-    }
-
     // only admin is allowed to update admin status
     function setAdmin(bytes calldata adminData) external {
         _guard(true);
@@ -106,7 +102,7 @@ contract OpenId3Account is
     }
 
     // both admin and operator is allowed to update the metadata
-    function setMetadata(bytes32 metadata) external {
+    function setMetadata(bytes calldata metadata) public override {
         _guard(false);
         _setMetadata(metadata);
     }
@@ -200,10 +196,8 @@ contract OpenId3Account is
         emit NewOperator(oldOperator, newOperator);
     }
 
-    function _setMetadata(bytes32 metadata) internal {
-        bytes32 oldMetadata = OpenId3AccountStorage.layout().metadata;
-        OpenId3AccountStorage.layout().metadata = metadata;
-        emit NewNPub(oldMetadata, metadata);
+    function _setMetadata(bytes calldata metadata) internal {
+        emit NewMetadata(metadata);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {

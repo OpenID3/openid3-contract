@@ -9,11 +9,9 @@ interface IOpenId3Account {
 
     function getOperator() external view returns(address);
 
-    function getMetadata() external view returns(bytes32);
-
     function initialize(
         bytes calldata adminData,
         address owner,
-        bytes32 metadata
+        bytes calldata metadata
     ) external;
 }

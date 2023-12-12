@@ -28,14 +28,10 @@ contract TestAccount is IOpenId3Account, Ownable {
         return owner();
     }
 
-    function getMetadata() external pure returns(bytes32) {
-        return bytes32(0);
-    }
-
     function initialize(
         bytes calldata /** adminData **/,
         address /* owner */,
-        bytes32 /* metadata */
+        bytes calldata /* metadata */
     ) external pure {
         return;
     }

@@ -22,7 +22,7 @@ import {
 import { genInitCode, callAsOperator, } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-const metadata = hre.ethers.encodeBytes32String("metadata");
+const metadata = hre.ethers.toUtf8Bytes("metadata");
 
 describe("OpenId3Account", function () {
   let entrypoint: Contract;
@@ -119,7 +119,6 @@ describe("OpenId3Account", function () {
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
     expect(await account.getOperator()).to.eq(deployer.address);
-    expect(await account.getMetadata()).to.eq(metadata);
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -142,7 +141,6 @@ describe("OpenId3Account", function () {
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
     expect(await account.getOperator()).to.eq(hre.ethers.ZeroAddress);
-    expect(await account.getMetadata()).to.eq(hre.ethers.ZeroHash);
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],

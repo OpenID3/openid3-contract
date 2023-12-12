@@ -5,12 +5,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import "../interfaces/OpenIdZkProofPublicInput.sol";
-import "../interfaces/IRsaCertRegistration.sol";
 import "../interfaces/IRsaCert.sol";
 import "../lib/RsaVerifier.sol";
+import "./RsaCertRegistration.sol";
 import "./AccountAdminBase.sol";
 
-contract GoogleZkAdmin is AccountAdminBase {
+contract GoogleZkAdmin is AccountAdminBase, RsaCertRegistration {
     using Strings for uint256;
 
     event AccountLinked(address indexed account, bytes32 indexed idHash);
@@ -19,8 +19,6 @@ contract GoogleZkAdmin is AccountAdminBase {
 
     bytes16 private constant _SYMBOLS = "0123456789abcdef";
     bytes32 constant GOOGLE_PROVIDER = keccak256("google");
-
-    IRsaCertRegistration public immutable rsaCertRegistration;
 
     bytes32 public constant MASK =
         hex"1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
@@ -38,9 +36,8 @@ contract GoogleZkAdmin is AccountAdminBase {
     mapping(address => bytes32) private _accounts;
     mapping(address => bytes32) private _proofCache;
 
-    constructor(address _plonkVerifier, address _certRegistration) {
+    constructor(address _plonkVerifier) {
         plonkVerifier = IPlonkVerifier(_plonkVerifier);
-        rsaCertRegistration = IRsaCertRegistration(_certRegistration);
     }
 
     function linkAccount(bytes32 idHash) external onlyAdminMode {
@@ -157,7 +154,7 @@ contract GoogleZkAdmin is AccountAdminBase {
     function _validateJwtSignature(
         OpenIdZkProofPublicInput memory input
     ) internal view returns (bool) {
-        address cert = rsaCertRegistration.getCert(input.kidHash);
+        address cert = getCert(input.kidHash);
         IRsaCert rsaCert = IRsaCert(cert);
         if (cert == address(0) || rsaCert.getIssuer() != GOOGLE_PROVIDER) {
             return false;

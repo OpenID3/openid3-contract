@@ -53,3 +53,11 @@ export async function parseJwt(jwt: string) {
     console.log(verified);
 }
 
+var KeyEncoder = require('key-encoder');
+var keyEncoder = new KeyEncoder.default('secp256k1');
+export function serializeKey() {
+    var pemPrivateKey = keyEncoder.encodePrivate('4e8a1dc52d9124a913196e308d6b8f638e9c845d6e4bcf34b4f2747604a3b6a3', 'raw', 'pem');
+    console.log(pemPrivateKey);
+}
+
+serializeKey();

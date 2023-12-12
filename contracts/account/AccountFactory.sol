@@ -34,7 +34,7 @@ contract AccountFactory {
             IOpenId3Account.initialize.selector,
             adminData,
             address(0),
-            bytes32(0)
+            bytes("") // metadata
         );
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);

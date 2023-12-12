@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IRsaCertRegistration.sol";
 import "./RsaCert.sol";
 
-contract RsaCertRegistration is IRsaCertRegistration, Ownable {
+abstract contract RsaCertRegistration is IRsaCertRegistration, Ownable {
     event CertAdded(bytes32 indexed kidHash, address indexed cert);
     event CertRevoked(bytes32 indexed kidHash);
 
@@ -27,7 +27,7 @@ contract RsaCertRegistration is IRsaCertRegistration, Ownable {
         emit CertRevoked(kidHash);
     }
 
-    function getCert(bytes32 kidHash) external view override returns (address) {
+    function getCert(bytes32 kidHash) public view override returns (address) {
         return certs[kidHash];
     }
 }
