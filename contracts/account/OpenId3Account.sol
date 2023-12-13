@@ -152,8 +152,6 @@ contract OpenId3Account is
         address newOperator,
         bytes memory operatorData
     ) internal {
-        console.log("newOperator: %s", newOperator);
-        console.logBytes(operatorData);
         if (operatorData.length > 0) {
             _call(newOperator, 0, operatorData);
         }

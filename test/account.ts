@@ -136,7 +136,7 @@ describe("OpenId3Account", function () {
     expect(await admin.getPasskeyId(deployed)).to.eq(keyId);
   });
 
-  it.only("should clone account with admin only", async function () {
+  it("should clone account with admin only", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
 
