@@ -30,36 +30,31 @@ contract AccountFactory {
     ) external returns (address proxy) {
         bytes32 salt = keccak256(adminData);
         proxy = Clones.cloneDeterministic(accountProxy, salt);
+        address manager = IOpenId3Account(accountImpl).getOperator();
         bytes memory accountData = abi.encodeWithSelector(
             IOpenId3Account.initialize.selector,
             adminData,
-            0,
+            abi.encodePacked(manager), // operator data
             bytes("") // metadata
         );
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);
     }
 
-    function clone(
-        bytes memory accountData
-    ) external returns (address proxy) {
+    function clone(bytes memory accountData) external returns (address proxy) {
         bytes32 salt = keccak256(accountData);
         proxy = Clones.cloneDeterministic(accountProxy, salt);
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);
     }
 
-    function predictClonedAddress(bytes32 salt)
-        external
-        view
-        returns(address)
-    {
+    function predictClonedAddress(
+        bytes32 salt
+    ) external view returns (address) {
         return Clones.predictDeterministicAddress(accountProxy, salt);
     }
 
-    function deploy(
-        bytes memory accountData
-    ) external returns (address proxy) {
+    function deploy(bytes memory accountData) external returns (address proxy) {
         bytes32 salt = keccak256(accountData);
         bytes memory bytecode = type(AccountProxy).creationCode;
         assembly ("memory-safe") {
@@ -74,12 +69,15 @@ contract AccountFactory {
 
     function predictDeployedAddress(
         bytes memory accountData
-    ) external view returns(address) {
+    ) external view returns (address) {
         bytes32 salt = keccak256(accountData);
         bytes memory bytecode = type(AccountProxy).creationCode;
         bytes32 hash = keccak256(
             abi.encodePacked(
-                bytes1(0xff), address(this), salt, keccak256(bytecode)
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(bytecode)
             )
         );
         return address(uint160(uint(hash)));

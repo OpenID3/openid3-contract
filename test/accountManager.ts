@@ -3,7 +3,6 @@ import {
   getEntryPoint,
   getPasskeyAdmin,
   getAccountFactory,
-  getAccountManager,
 } from "../lib/utils";
 import * as hre from "hardhat";
 import { AddressLike, Contract, Interface } from "ethers";
@@ -13,6 +12,7 @@ import {
   ERC20ForTest__factory,
   ERC721ForTest__factory,
   ERC1155ForTest__factory,
+  AccountManager__factory,
 } from "../types";
 import {
   genPasskey,
@@ -21,16 +21,40 @@ import {
   callFromPasskey,
   buildPasskeyAdminCallData,
 } from "../lib/passkey";
-import { genInitCode, callAsOperator } from "../lib/userop";
+import { genInitCode, callAsAccountManager } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-const metadata = hre.ethers.toUtf8Bytes("https://example.com");
+const metadata = hre.ethers.toUtf8Bytes("metadata");
+
+const buildDefaultOperatorData = (operator: HardhatEthersSigner) => {
+  const opData = buildOperatorCallData(operator, true);
+  return buildOperatorData(hre.ethers.ZeroAddress, opData);
+}
+
+const buildOperatorData = (operator: string, data: string) => {
+  return hre.ethers.solidityPacked(["address", "bytes"], [operator, data]);
+};
+
+const buildOperatorCallData = (
+  operator: HardhatEthersSigner,
+  enabled: boolean,
+  validAfter?: number,
+  validUntil?: number
+) => {
+  return AccountManager__factory.createInterface().encodeFunctionData(
+    "grant",
+    [operator.address, {
+      enabled,
+      validAfter: validAfter || 0,
+      validUntil: validUntil || 0,
+    }]
+  );
+};
 
 describe("OpenId3Account", function () {
   let entrypoint: Contract;
   let admin: Contract;
   let factory: Contract;
-  let manager: Contract;
   let accountIface: Interface;
   let passkey: Passkey;
 
@@ -70,7 +94,7 @@ describe("OpenId3Account", function () {
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
-      deployer.address,
+      hre.ethers.ZeroAddress,
       metadata,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
@@ -80,9 +104,11 @@ describe("OpenId3Account", function () {
   const deployAccount = async (admin: Contract, passkey: Passkey) => {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
+    const opCallData = buildOperatorCallData(true);
+    const defaultOpData = buildOperatorData(deployer.address, opCallData);
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
-      deployer.address,
+      defaultOpData,
       metadata,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
@@ -105,19 +131,20 @@ describe("OpenId3Account", function () {
     entrypoint = await getEntryPoint(hre);
     admin = await getPasskeyAdmin(hre);
     factory = await getAccountFactory(hre);
-    manager = await getAccountManager(hre);
     accountIface = await getInterface(hre, "OpenId3Account");
     passkey = genPasskey();
   });
 
-  it("should deploy account", async function () {
+  it.only("should deploy account", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
-    const accountInitData = accountIface.encodeFunctionData("initialize", [
-      adminData,
-      deployer.address,
-      metadata,
-    ]);
+    const accountInitData = accountIface.encodeFunctionData(
+      "initialize", [
+        adminData,
+        buildDefaultOperatorData(),
+        metadata,
+      ]
+    );
 
     const deployed = await factory.predictDeployedAddress(accountInitData);
     await expect(factory.deploy(accountInitData))
@@ -127,7 +154,13 @@ describe("OpenId3Account", function () {
     const account = OpenId3Account__factory.connect(deployed, deployer);
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(deployer.address);
+    const manager = AccountManager__factory.connect(
+      await account.getOperator(),
+      deployer
+    );
+    expect(
+      await manager.getValidationData(deployed, deployer.address)
+    ).to.eq([true, 0n, 0n]);
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -136,7 +169,7 @@ describe("OpenId3Account", function () {
     expect(await admin.getPasskeyId(deployed)).to.eq(keyId);
   });
 
-  it.only("should clone account with admin only", async function () {
+  it("should clone account with admin only", async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
 
@@ -147,9 +180,15 @@ describe("OpenId3Account", function () {
       .withArgs(cloned);
 
     const account = OpenId3Account__factory.connect(cloned, deployer);
+    const manager = AccountManager__factory.connect(
+      await account.getOperator(),
+      deployer
+    );
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(await manager.getAddress());
+    expect(await manager.getValidationData(cloned, deployer.address)).to.eq(
+      hre.ethers.ZeroHash
+    );
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -174,9 +213,15 @@ describe("OpenId3Account", function () {
       .withArgs(cloned);
 
     const account = OpenId3Account__factory.connect(cloned, deployer);
+    const manager = AccountManager__factory.connect(
+      await account.getOperator(),
+      deployer
+    );
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await manager.getValidationData(cloned, deployer.address)).to.eq(
+      deployer.address
+    );
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -209,83 +254,79 @@ describe("OpenId3Account", function () {
       0,
       "0x",
     ]);
+    const accountImpl = OpenId3Account__factory.connect(
+      await factory.accountImpl(),
+      deployer
+    );
+    const manager = AccountManager__factory.connect(
+      await accountImpl.getOperator(),
+      deployer
+    );
     await expect(
-      callAsOperator(account, deployer, initCode, setOperatorData, tester1)
+      callAsAccountManager(
+        account,
+        deployer,
+        initCode,
+        setOperatorData,
+        tester1
+      )
     )
       .to.emit(factory, "AccountDeployed")
-      .withArgs(account);
+      .withArgs(account)
+      .to.emit(manager, "Grant")
+      .withArgs(account, deployer.address);
   });
 
   it("should reset operator properly", async function () {
     const { deployer, tester1 } = await hre.ethers.getNamedSigners();
     const account = await deployAccount(admin, passkey);
+    const manager = AccountManager__factory.connect(
+      await account.getOperator(),
+      deployer
+    );
     expect(await account.getMode()).to.eq(0); // admin mode
-    expect(await account.getOperator()).to.eq(deployer.address);
+    const accountAddr = await account.getAddress();
+    expect(
+      await manager.getValidationData(accountAddr, deployer.address)
+    ).to.eq(deployer.address);
 
-    // non-operator/non-admin cannot set operator
-    await expect(
-      account.connect(tester1).setOperator(tester1.address, "0x")
-    ).to.be.revertedWithCustomError(account, "NotAuthorized");
-    expect(await account.getMode()).to.eq(0); // admin mode
-    // operator should not be updated
-    expect(await account.getOperator()).to.eq(deployer.address);
-
+    const grantData = manager.interface.encodeFunctionData("grant", [
+      tester1.address,
+    ]);
     // current operator can not set operator directly
     await expect(
-      account.connect(deployer).setOperator(tester1.address, "0x")
+      account
+        .connect(deployer)
+        .execute(await manager.getAddress(), 0, grantData)
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
     expect(await account.getMode()).to.eq(0); // admin mode
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(
+      await manager.getValidationData(accountAddr, deployer.address)
+    ).to.eq(deployer.address);
 
     // current operator cannot set operator via ERC-4337
-    const accountAddr = await account.getAddress();
-    const setOperatorData1 = accountIface.encodeFunctionData("setOperator", [
-      tester1.address,
-      "0x",
+    const executeData = account.interface.encodeFunctionData("execute", [
+      await manager.getAddress(),
+      0,
+      grantData,
     ]);
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", setOperatorData1, deployer)
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, deployer)
     ).to.emit(entrypoint, "UserOperationRevertReason");
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(
+      await manager.getValidationData(accountAddr, deployer.address)
+    ).to.eq(deployer.address);
     expect(await account.getMode()).to.eq(1); // operator mode
 
-    // operator can not reset operator via ERC-4337 execute
-    const executeData1 = account.interface.encodeFunctionData("execute", [
-      accountAddr,
-      0,
-      setOperatorData1,
-    ]);
+    // admin can set operator
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeData1, tester1)
-    ).to.emit(entrypoint, "UserOperationRevertReason");
-    expect(await account.getOperator()).to.eq(deployer.address);
-    expect(await account.getMode()).to.eq(1); // operator mode
-
-    // admin can reset operator
-    await expect(
-      callFromPasskey(accountAddr, passkey, "0x", setOperatorData1, tester1)
+      callFromPasskey(accountAddr, passkey, "0x", executeData, tester1)
     )
-      .to.emit(account, "NewOperator")
-      .withArgs(deployer.address, tester1.address);
-    expect(await account.getOperator()).to.eq(tester1.address);
-    expect(await account.getMode()).to.eq(0); // admin mode
-
-    // admin can set operator via EIP-4337 execute
-    const setOperatorData2 = accountIface.encodeFunctionData("setOperator", [
-      deployer.address,
-      "0x",
-    ]);
-    const executeData2 = account.interface.encodeFunctionData("execute", [
-      accountAddr,
-      0,
-      setOperatorData2,
-    ]);
-    await expect(
-      callFromPasskey(accountAddr, passkey, "0x", executeData2, tester1)
-    )
-      .to.emit(account, "NewOperator")
-      .withArgs(tester1.address, deployer.address);
-    expect(await account.getOperator()).to.eq(deployer.address);
+      .to.emit(manager, "Grant")
+      .withArgs(accountAddr, deployer.address);
+    expect(await manager.getValidationData(accountAddr, tester1.address)).to.eq(
+      tester1.address
+    );
     expect(await account.getMode()).to.eq(0); // admin mode
   });
 
@@ -299,6 +340,9 @@ describe("OpenId3Account", function () {
 
     const passkey2 = genPasskey();
     const newAdminData = buildPasskeyAdminCallData(admin, passkey2);
+    let setAdminData = accountIface.encodeFunctionData("setAdmin", [
+      newAdminData,
+    ]);
     const newKeyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
       [passkey2.pubKeyX, passkey2.pubKeyY]
@@ -314,14 +358,10 @@ describe("OpenId3Account", function () {
       account.connect(tester1).setAdmin(adminAddr, newAdminData)
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
 
-    let setAdminData = accountIface.encodeFunctionData("setAdmin", [
-      adminAddr,
-      newAdminData,
-    ]);
     // operator cannot set admin via EIP-4337, but the mode
     // will be updated since validateSignature is called
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", setAdminData, tester1)
+      callAsAccountManager(accountAddr, deployer, "0x", setAdminData, tester1)
     ).to.emit(entrypoint, "UserOperationRevertReason");
     expect(await account.getMode()).to.eq(1); // operator mode
 
@@ -340,14 +380,17 @@ describe("OpenId3Account", function () {
     // operator cannot set admin via EIP-4337 execute, but the mode
     // will be updated since validateSignature is called
     const adminData = buildPasskeyAdminCallData(admin, passkey);
-    setAdminData = accountIface.encodeFunctionData("setAdmin", [adminAddr, adminData]);
+    setAdminData = accountIface.encodeFunctionData("setAdmin", [
+      adminAddr,
+      adminData,
+    ]);
     const executeData = account.interface.encodeFunctionData("execute", [
       accountAddr,
       0,
       setAdminData,
     ]);
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeData, deployer)
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, deployer)
     ).to.emit(entrypoint, "UserOperationRevertReason");
     expect(await account.getMode()).to.eq(1); // operator mode
 
@@ -376,11 +419,7 @@ describe("OpenId3Account", function () {
     const newImpl = (
       await hre.deployments.deploy("OpenId3AccountV2ForTest", {
         from: deployer.address,
-        args: [
-          await account.entryPoint(),
-          await admin.getAddress(),
-          await manager.getAddress(),
-        ],
+        args: [await account.entryPoint()],
       })
     ).address;
 
@@ -399,15 +438,22 @@ describe("OpenId3Account", function () {
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
 
     // operator cannot upgrade
-    const upgradeData = account.interface.encodeFunctionData(
-      "upgradeTo", [newImpl]);
+    const upgradeData = account.interface.encodeFunctionData("upgradeTo", [
+      newImpl,
+    ]);
     const executeData = account.interface.encodeFunctionData("execute", [
       accountAddr,
       0,
       upgradeData,
     ]);
     expect(
-      await callAsOperator(accountAddr, deployer, "0x", executeData, deployer)
+      await callAsAccountManager(
+        accountAddr,
+        deployer,
+        "0x",
+        executeData,
+        deployer
+      )
     ).to.emit(entrypoint, "UserOperationRevertReason");
     expect(await account.getMode()).to.eq(1); // operator mode
     expect(await account.implementation()).to.eq(oldImpl); // not upgraded
@@ -452,7 +498,7 @@ describe("OpenId3Account", function () {
       erc20Data,
     ]);
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeData, tester1)
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, tester1)
     )
       .to.emit(erc20, "Transfer")
       .withArgs(accountAddr, tester1.address, 100);
@@ -474,7 +520,13 @@ describe("OpenId3Account", function () {
       ]
     );
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeBatchData, tester1)
+      callAsAccountManager(
+        accountAddr,
+        deployer,
+        "0x",
+        executeBatchData,
+        tester1
+      )
     )
       .to.emit(erc20, "Transfer")
       .withArgs(accountAddr, tester1.address, 100)
@@ -486,6 +538,34 @@ describe("OpenId3Account", function () {
     expect(await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress)).to.eq(
       ethAmount
     );
+
+    // reset operator with expired timestamp
+    const epoch = Math.floor(Date.now() / 1000);
+    const newOperator = buildOperator(deployer, 0, epoch - 1800);
+    const manager = AccountManager__factory.connect(
+      await account.getOperator(),
+      deployer
+    );
+    const executeData1 = account.interface.encodeFunctionData("execute", [
+      accountAddr,
+      0,
+      manager.interface.encodeFunctionData("grant", [
+        deployer.address,
+        newOperator,
+      ]),
+    ]);
+    await expect(
+      callFromPasskey(accountAddr, passkey, "0x", executeData1, tester1)
+    )
+      .to.emit(manager, "Grant")
+      .withArgs(accountAddr, newOperator);
+    expect(await manager.getValidationData(accountAddr, tester1.address)).to.eq(
+      newOperator
+    );
+    expect(await account.getMode()).to.eq(0); // admin mode
+    await expect(
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, tester1)
+    ).to.be.revertedWithCustomError(entrypoint, "FailedOp");
   });
 
   it("Should hold and transfer ERC721 successfully", async function () {
@@ -524,7 +604,7 @@ describe("OpenId3Account", function () {
       erc721Data,
     ]);
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeData, tester1)
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, tester1)
     )
       .to.emit(erc721, "Transfer")
       .withArgs(accountAddr, tester1.address, 0);
@@ -570,7 +650,7 @@ describe("OpenId3Account", function () {
       erc1155Data,
     ]);
     await expect(
-      callAsOperator(accountAddr, deployer, "0x", executeData, tester1)
+      callAsAccountManager(accountAddr, deployer, "0x", executeData, tester1)
     )
       .to.emit(erc1155, "TransferSingle")
       .withArgs(accountAddr, accountAddr, tester1.address, 1, 10);

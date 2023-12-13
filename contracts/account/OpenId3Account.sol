@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC165.sol";
 
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
@@ -20,6 +21,7 @@ library OpenId3AccountStorage {
 
     struct Layout {
         address admin;
+        address operator;
         uint8 mode;
     }
 
@@ -47,11 +49,11 @@ contract OpenId3Account is
     error WrongArrayLength();
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
-    event NewOperator(bytes32 indexed oldOperator, bytes32 indexed newOperator);
+    event NewOperator(address indexed oldOperator, address indexed newOperator);
 
     IEntryPoint private immutable _entryPoint;
-    IAccountManager private immutable _manager;
     address private immutable _defaultAdmin;
+    address public immutable accountManager;
 
     modifier onlyEntryPointOrSelf() {
         if (
@@ -62,17 +64,17 @@ contract OpenId3Account is
         _;
     }
 
-    modifier onlyAdmin() {
+    modifier onlyAdminMode() {
         if (OpenId3AccountStorage.layout().mode != 0x00) {
             revert OnlyAdminAllowed();
         }
         _;
     }
 
-    constructor(address entryPoint_, address defaultAdmin, address manager) {
+    constructor(address entryPoint_, address admin_, address manager_) {
         _entryPoint = IEntryPoint(entryPoint_);
-        _manager = IAccountManager(manager);
-        _defaultAdmin = defaultAdmin;
+        accountManager = manager_;
+        _defaultAdmin = admin_;
         _disableInitializers();
     }
 
@@ -86,12 +88,18 @@ contract OpenId3Account is
 
     function initialize(
         bytes calldata adminData,
-        uint256 validator,
+        bytes calldata operatorData,
         bytes calldata metadata
     ) public virtual override initializer {
-        _setAdmin(adminData);
-        _manager.grant(validator);
-        _manager.setMetadata(metadata);
+        _setAdmin(
+            address(bytes20(adminData[0:20])),
+            adminData[20:]
+        );
+        _setOperator(
+            address(bytes20(operatorData[0:20])),
+            operatorData[20:]
+        );
+        IAccountManager(accountManager).setMetadata(metadata);
     }
 
     function getMode() external view override returns (uint8) {
@@ -103,22 +111,64 @@ contract OpenId3Account is
         return admin == address(0) ? _defaultAdmin : admin;
     }
 
-    function getAccountManager() external view returns (address) {
-        return address(_manager);
+    function getOperator() public view returns (address) {
+        address operator = OpenId3AccountStorage.layout().operator;
+        return operator == address(0) ? accountManager : operator;
     }
 
-    // only admin is allowed to update admin status
     function setAdmin(
-        bytes calldata adminData
-    ) external onlyEntryPointOrSelf onlyAdmin {
-        _setAdmin(adminData);
+        address admin,
+        bytes memory adminData
+    ) public onlyEntryPointOrSelf onlyAdminMode {
+        address oldAdmin = getAdmin();
+        _setAdmin(admin, adminData);
+        emit NewAdmin(oldAdmin, admin);
+    }
+
+    function setOperator(
+        address operator,
+        bytes memory operatorData
+    ) public onlyEntryPointOrSelf onlyAdminMode {
+        address oldOperator = getOperator();
+        _setOperator(operator, operatorData);
+        emit NewOperator(oldOperator, operator);
+    }
+
+    function _setAdmin(
+        address newAdmin,
+        bytes memory adminData
+    ) internal {
+        if (adminData.length > 0) {
+            _call(newAdmin, 0, adminData);
+        }
+        if (newAdmin == _defaultAdmin) {
+            OpenId3AccountStorage.layout().admin = address(0);
+        } else {
+            OpenId3AccountStorage.layout().admin = newAdmin;
+        }
+    }
+
+    function _setOperator(
+        address newOperator,
+        bytes memory operatorData
+    ) internal {
+        console.log("newOperator: %s", newOperator);
+        console.logBytes(operatorData);
+        if (operatorData.length > 0) {
+            _call(newOperator, 0, operatorData);
+        }
+        if (newOperator == accountManager) {
+            OpenId3AccountStorage.layout().operator = address(0);
+        } else {
+            OpenId3AccountStorage.layout().operator = newOperator;
+        }
     }
 
     /** UUPSUpgradeable */
 
     function _authorizeUpgrade(
         address /* newImplementation */
-    ) internal view override onlyEntryPointOrSelf onlyAdmin {}
+    ) internal view override onlyEntryPointOrSelf onlyAdminMode {}
 
     function implementation() external view returns (address) {
         return _getImplementation();
@@ -149,19 +199,45 @@ contract OpenId3Account is
 
     function _validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash
+        bytes32 uoHash
     ) internal virtual override returns (uint256 validationData) {
         uint8 mode = uint8(userOp.signature[0]);
         OpenId3AccountStorage.layout().mode = mode;
         if (mode == 0x00) {
             // admin mode
-            address admin = OpenId3AccountStorage.layout().admin;
-            return _validateSignature(admin, userOpHash, userOp.signature[1:]);
+            address admin = getAdmin();
+            return _validateSignature(admin, uoHash, userOp.signature[1:]);
         } else if (mode == 0x01) {
             // operator mode
-            return _manager.validateSignature(userOpHash, userOp.signature[1:]);
+            address operator = getOperator();
+            return _validateSignature(operator, uoHash, userOp.signature[1:]);
         } else {
             revert InvalidMode(mode);
+        }
+    }
+
+    function _validateSignature(
+        address signer,
+        bytes32 uoHash,
+        bytes calldata signature
+    ) internal virtual returns (uint256) {
+        if (
+            signer.isContract() &&
+            IERC165(signer).supportsInterface(
+                type(IAccountValidator).interfaceId
+            )
+        ) {
+            return
+                IAccountValidator(signer).validateSignature(uoHash, signature);
+        } else {
+            return
+                SignatureChecker.isValidSignatureNow(
+                    signer,
+                    uoHash.toEthSignedMessageHash(),
+                    signature
+                )
+                    ? 0
+                    : 1;
         }
     }
 
@@ -184,18 +260,6 @@ contract OpenId3Account is
 
     /* help functions */
 
-    function _setAdmin(bytes calldata adminData) internal {
-        address newAdmin = address(bytes20(adminData[0:20]));
-        if (adminData.length > 20) {
-            _call(newAdmin, 0, adminData[20:]);
-        }
-        address oldAdmin = getAdmin();
-        if (oldAdmin != newAdmin) {
-            OpenId3AccountStorage.layout().admin = newAdmin;
-            emit NewAdmin(oldAdmin, newAdmin);
-        }
-    }
-
     function _call(address target, uint256 value, bytes memory data) internal {
         (bool success, bytes memory result) = target.call{value: value}(data);
         if (!success) {
@@ -205,34 +269,10 @@ contract OpenId3Account is
         }
     }
 
-    function _isValidator(address signer) internal view returns (bool) {
-        return
-            signer.isContract() &&
-            IERC165(signer).supportsInterface(
-                type(IAccountValidator).interfaceId
-            );
-    }
-
-    function _validateSignature(
-        address signer,
-        bytes32 userOpHash,
-        bytes calldata signature
-    ) internal view returns (uint256) {
-        if (_isValidator(signer)) {
-            return
-                IAccountValidator(signer).validateSignature(
-                    userOpHash,
-                    signature
-                );
-        } else {
-            return
-                SignatureChecker.isValidSignatureNow(
-                    signer,
-                    userOpHash.toEthSignedMessageHash(),
-                    signature
-                )
-                    ? 0
-                    : 1;
-        }
+    function supportsInterface(bytes4 interfaceId) public pure override returns(bool) {
+        return interfaceId == type(IOpenId3Account).interfaceId ||
+            interfaceId == type(IERC721Receiver).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IERC165).interfaceId;
     }
 }

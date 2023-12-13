@@ -3,53 +3,74 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "../interfaces/IAccountManager.sol";
 import "../admin/AccountAdminBase.sol";
 
 contract AccountManager is IAccountManager, AccountAdminBase {
     using ECDSA for bytes32;
-    using EnumerableSet for EnumerableSet.UintSet;
 
-    mapping(address => EnumerableSet.UintSet) private _acls;
+    mapping(address => mapping(address => ValidationData)) private _validators;
 
-    function grant(uint256 validator) external override onlyAdminMode {
-        _acls[msg.sender].add(validator);
-        emit Grant(msg.sender, validator);
+    function initAccount(
+        address validator,
+        ValidationData memory data,
+        bytes calldata metadata
+    ) external onlyAdminMode {
+        grant(validator, data);
+        setMetadata(metadata);
     }
 
-    function revoke(uint256 validator) external override onlyAdminMode {
-        _acls[msg.sender].remove(validator);
+    function grant(
+        address validator,
+        ValidationData memory data
+    ) public override onlyAdminMode {
+        _validators[msg.sender][validator] = data;
+        emit Grant(msg.sender, validator, data);
+    }
+
+    function revoke(address validator) external override onlyAdminMode {
+        _validators[msg.sender][validator].enabled = false;
         emit Revoke(msg.sender, validator);
     }
 
     function setMetadata(
         bytes calldata metadata
-    ) external override onlyAdminMode {
+    ) public override onlyAdminMode {
         emit NewMetadata(msg.sender, metadata);
     }
 
-    function getValidators() external view override returns (uint256[] memory) {
-        return _acls[msg.sender].values();
+    function getValidationData(
+        address account,
+        address validator
+    ) external view override returns (ValidationData memory) {
+        return _validators[account][validator];
     }
 
     function validateSignature(
         bytes32 challenge,
         bytes calldata validationData
     ) public view override returns (uint256) {
-        uint256 operator = uint256(bytes32(validationData[0:32]));
-        if (!_acls[msg.sender].contains(operator)) {
+        address validator = address(bytes20(validationData[0:20]));
+        ValidationData memory data = _validators[msg.sender][validator];
+        if (data.enabled == false) {
             return 1;
         }
         return
             SignatureChecker.isValidSignatureNow(
-                address(uint160(operator)),
+                validator,
                 challenge.toEthSignedMessageHash(),
-                validationData[32:]
+                validationData[20:]
             )
-                ? operator &
-                    0xffffffffffffffffffffffff0000000000000000000000000000000000000000
+                ? _genValidationData(data)
                 : 1;
+    }
+
+    function _genValidationData(
+        ValidationData memory data
+    ) private pure returns (uint256) {
+        return
+            (uint256(data.validAfter) << 208) +
+            (uint256(data.validUntil) << 160);
     }
 }
