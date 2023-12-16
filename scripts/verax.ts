@@ -200,29 +200,52 @@ const PORTAL_ABI = [{
   type: "function",
 }];
 
+export function scanServiceUrl() {
+  if (hre.network.name === "linea") {
+    return "https://api.lineascan.build/api";
+  } else {
+    throw new Error("unsupported chain");
+  }
+}
+
+export function genUrl(query: Record<string, string>) {
+  const url = scanServiceUrl();
+  const params = new URLSearchParams(query);
+  return `${url}?${params.toString()}`;
+}
+
 export async function searchAttestation() {
   const attestationData =
-    "0x8f2f90d8304f6eb382d037c47a041d8c8b4d18bdd8b082fa32828e016a584ca79d93f7420b0ef9d8eb5f63f7e598589a104391da5f89cd6553a6014f02ed513e";
+    "0x8f2f90d8304f6eb382d037c47a041d8c8b4d18bdd8b082fa32828e016a584ca7da004b92e4cb807f2e20a0e4e3fb3dacc8a7739d56b872a60cccaf4a8743565d";
   const signature =
-    "0xe0122c9f2095b5c2499b17cafd935e52a7cc817d4823a684affbce1d372f83fd5d673eea7136e04b1cca64c95ac4e000166bbc404761627e283096d343f8ca4c1c";
+    "0x64a027c2eef72aa684deb29ee71ad340b2b51ccce7071d15188856296315008b6ed4a83e57ad74c04e7c0eefdb87053d28f1d91f712bddfa99b9a7b4a6864a671b";
   const topic =
     "0x1c978da31d5a734f3dd3b88a7801d344b522301e6d07006e51520330e6c0795d";
   let message = ethers.solidityPackedKeccak256(
     ["bytes", "bytes"],
-    [attestationData, "0x09C08f46d523822cC9D18A077e2e3BDE5BC07a0b"]
+    [attestationData, "0x7BB8044f2305e26461e13b4aad1e619d3b78646E"]
   );
   const expectedSigner = ethers.verifyMessage(ethers.getBytes(message), signature);
   console.log("Signer: ", expectedSigner);
-  const logs = await hre.ethers.provider.getLogs({
-    fromBlock: 1036373,
-    toBlock: "latest",
+  const query = {
+    module: "logs",
+    action: "getLogs",
     address: "0x401c196454c5541c6c63713f14db2967fcc0b38a",
-    topics: [topic, ethers.keccak256(attestationData)],
-  });
+    page: "1",
+    offset: "1000",
+    apikey: process.env.LINEASCAN_API_KEY!,
+    topic0: topic,
+    topic0_1_opr: "and",
+    topic1: ethers.keccak256(attestationData),
+  };
+  const resp = await fetch(genUrl(query));
+  const result = await resp.json();
+  const logs = result.result;
   if (logs.length == 0) {
     console.log("no log found");
     return;
   }
+  console.log(logs);
   const iface = OpenId3TeeModule__factory.createInterface();
   const event = iface.parseLog({
     topics: Array.from(logs[0].topics),
@@ -236,4 +259,4 @@ export async function searchAttestation() {
 // registerPortal();
 // getAttestation();
 // checkIssuer();
-// searchAttestation();
+searchAttestation();
