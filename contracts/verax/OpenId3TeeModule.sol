@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.21;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import "linea-attestation-registry-contracts/src/abstracts/AbstractModule.sol";
+import "./AbstractModule.sol";
 
 contract OpenId3TeeModule is AbstractModule {
     using ECDSA for bytes32;

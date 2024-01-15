@@ -33,7 +33,6 @@
     "@openzeppelin/contracts": "^4.2.0",
     "@verax-attestation-registry/verax-sdk": "^0.0.15",
     "base64url": "^3.0.1",
-    "linea-attestation-registry-contracts": "file:../linea-attestation-registry/contracts",
     "merkle-tree": "github:dongshu2013/merkle-tree",
     "openzeppelin-contracts": "^4.0.0"
   }
