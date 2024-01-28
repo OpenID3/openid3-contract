@@ -14,8 +14,6 @@
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
     "@nomicfoundation/hardhat-ethers": "^3.0.4",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
-    "@typechain/ethers-v6": "^0.5.1",
-    "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.9",
     "@types/mocha": "^10.0.3",
     "chai": "^4.3.10",
@@ -25,8 +23,7 @@
     "hardhat-deploy": "^0.11.43",
     "hardhat-deploy-ethers": "^0.4.1",
     "hardhat-gas-reporter": "^1.0.9",
-    "key-encoder": "^2.0.3",
-    "typechain": "^8.3.2"
+    "key-encoder": "^2.0.3"
   },
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",

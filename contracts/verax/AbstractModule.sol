@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.21;
 
-import { AttestationPayload } from "linea-attestation-registry-contracts/src/types/Structs.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
+struct AttestationPayload {
+  bytes32 schemaId; // The identifier of the schema this attestation adheres to.
+  uint64 expirationDate; // The expiration date of the attestation.
+  bytes subject; // The ID of the attestee, EVM address, DID, URL etc.
+  bytes attestationData; // The attestation data.
+}
 
 /**
  * @title Abstract Module
