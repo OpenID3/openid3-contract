@@ -30,12 +30,11 @@ contract AccountFactory {
     ) external returns (address proxy) {
         bytes32 salt = keccak256(adminData);
         proxy = Clones.cloneDeterministic(accountProxy, salt);
-        address manager = IOpenId3Account(accountImpl).getOperator();
         bytes memory accountData = abi.encodeWithSelector(
             IOpenId3Account.initialize.selector,
             adminData,
-            abi.encodePacked(manager), // operator data
-            bytes("") // metadata
+            bytes32(0), // operator data
+            "" // metadata
         );
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);

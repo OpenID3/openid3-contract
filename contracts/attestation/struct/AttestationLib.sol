@@ -11,7 +11,7 @@ library AttestationLib {
     // input is with 108 bytes:
     //   bytes32: kidHash
     //   bytes32: accountIdHash
-    //   bytes32: attestation
+    //   bytes32: nonce
     //   bytes8(uint64): iat
     function decodeOneAttestation(
         bytes calldata input,
@@ -20,14 +20,15 @@ library AttestationLib {
     ) internal view returns (AttestationEvent memory) {
         bytes32 kid = bytes32(input[0:32]);
         uint32 provider = registry.getProvider(kid);
-        address from = address(bytes20(bytes32(input[32:64])));
-        uint256 accountId = encodeSocialAccountId(provider, from);
-        bytes32 payloadHash = bytes32(input[64:96]);
-        if (keccak256(abi.encode(payload)) != payloadHash) {
+        // take last 20 bytes of accountIdHash as address for provider
+        address account = address(bytes20(input[44:64]));
+        uint256 from = encodeSocialAccountId(provider, account);
+        bytes32 nonce = bytes32(input[64:96]);
+        if (keccak256(abi.encode(payload)) != nonce) {
             revert AttestationPayloadHashMismatch();
         }
         uint64 iat = uint64(bytes8(input[96:104]));
-        return AttestationEvent(accountId, payload.to, iat, payload.statement);
+        return AttestationEvent(from, payload.to, iat, payload.statement);
     }
 
     function encodeSocialAccountId(
