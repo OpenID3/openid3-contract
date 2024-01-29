@@ -7,6 +7,7 @@ import "../kid/IKidRegistry.sol";
 
 library AttestationLib {
     error AttestationPayloadHashMismatch();
+    error InvalidAccountProvider();
 
     // input is with 108 bytes:
     //   bytes32: kidHash
@@ -20,6 +21,9 @@ library AttestationLib {
     ) internal view returns (AttestationEvent memory) {
         bytes32 kid = bytes32(input[0:32]);
         uint32 provider = registry.getProvider(kid);
+        if (provider == 0) {
+            revert InvalidAccountProvider();
+        }
         // take last 20 bytes of accountIdHash as address for provider
         address account = address(bytes20(input[44:64]));
         uint256 from = encodeSocialAccountId(provider, account);

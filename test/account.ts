@@ -105,7 +105,7 @@ describe("OpenId3Account", function () {
   };
 
   beforeEach(async function () {
-    await hre.deployments.fixture(["TEST"]);
+    await hre.deployments.fixture(["ACCOUNT"]);
     entrypoint = await getEntryPoint(hre);
     admin = await getPasskeyAdmin(hre);
     factory = await getAccountFactory(hre);

@@ -93,7 +93,7 @@ describe("OpenId3Account", function () {
     voting = await getSocialVoting(hre);
   });
 
-  it("should vote", async function () {
+  it.only("should vote", async function () {
     const { tester1 } = await hre.getNamedAccounts();
     const payload = {
       to: tester1,

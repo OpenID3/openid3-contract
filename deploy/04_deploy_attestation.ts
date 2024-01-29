@@ -10,6 +10,7 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         genBytecode(await hre.artifacts.readArtifact("PlonkVerifier"), "0x"),
         hre.ethers.ZeroHash,
     );
+
     const verifierArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
         ["address"],
         [verifier.address],
@@ -37,7 +38,6 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         ["address", "address"],
         [registry.address, zkverifier.address],
     );
-    console.log("args: ", args);
     await deterministicDeploy(
         hre,
         "SocialAttestation",

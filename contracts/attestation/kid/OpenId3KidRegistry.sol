@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IKidRegistry.sol";
 
 struct KidData {
-    uint32 provider;
+    uint32 provider; // 0 means invalid provider
     uint48 validUntil;
 }
 
@@ -27,12 +27,10 @@ contract OpenId3KidRegistry is IKidRegistry, Ownable {
     }
 
     function getProvider(bytes32 kid) override external view returns(uint32) {
-        return _kids[kid].provider;
+        return isValidKid(kid) ? _kids[kid].provider : 0;
     }
 
-    function validateKid(bytes32 kid) override external view {
-        if (_kids[kid].validUntil < block.timestamp) {
-            revert StaleKid();
-        }
+    function isValidKid(bytes32 kid) override public view returns(bool) {
+        return _kids[kid].validUntil > block.timestamp;
     }
 }

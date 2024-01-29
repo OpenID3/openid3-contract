@@ -11,7 +11,7 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         hre.ethers.ZeroHash,
     );
 
-    const manager = await deterministicDeploy(
+    const metadata = await deterministicDeploy(
         hre,
         "AccountMetadata",
         genBytecode(await getArtifact(hre, "AccountMetadata"), "0x"),
@@ -21,7 +21,7 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     const passkeyAdmin = await (await getPasskeyAdmin(hre)).getAddress();
     const accountArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
         ["address", "address", "address"],
-        [getEntryPointAddress(), passkeyAdmin, manager.address]
+        [getEntryPointAddress(), passkeyAdmin, metadata.address]
     );
     const impl = await deterministicDeploy(
         hre,
@@ -43,4 +43,4 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
 }
 
 export default func;
-func.tags = ["PROD", "TEST", "ACCOUNT"];
+func.tags = ["ACCOUNT"];

@@ -7,5 +7,5 @@ interface IKidRegistry {
 
     function getProvider(bytes32 kid) external view returns(uint32);
 
-    function validateKid(bytes32 kid) external view;
+    function isValidKid(bytes32 kid) external view returns(bool);
 }
