@@ -17,7 +17,7 @@ import {
   callFromPasskey,
   buildPasskeyAdminCallData,
 } from "../lib/passkey";
-import { genInitCode, callAsOperator } from "../lib/userop";
+import { genInitCode, callAsOperator, callAsOperators } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const metadataUrl = "ipfs://Qmxxxxx";
@@ -61,12 +61,12 @@ describe("OpenId3Account", function () {
     return new Contract(deployed.address, artifact.abi, deployer);
   };
 
-  const getAccountAddr = async (admin: Contract, passkey: Passkey) => {
+  const getAccountAddr = async (admin: Contract, passkey: Passkey, operators?: string) => {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
-      deployer.address,
+      operators ?? deployer.address,
       metadataUrl,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
@@ -80,20 +80,20 @@ describe("OpenId3Account", function () {
   const deployAccount = async (
     admin: Contract,
     passkey: Passkey,
-    signer?: HardhatEthersSigner
+    operators?: string
   ) => {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
-      deployer.address,
+      operators ?? deployer.address,
       metadataUrl,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
     const cloned = await factory.predictClonedAddress(salt);
     await deposit(deployer, cloned);
     await factory.clone(accountInitData);
-    return getOpenId3Account(hre, cloned, signer ?? deployer);
+    return getOpenId3Account(hre, cloned, deployer);
   };
 
   const deposit = async (from: HardhatEthersSigner, to: AddressLike) => {
@@ -497,9 +497,75 @@ describe("OpenId3Account", function () {
       callAsOperator(accountAddr, deployer, "0x", executeBatchData, tester1)
     )
       .to.emit(erc20, "Transfer")
-      .withArgs(accountAddr, tester1.address, 100)
+      .withArgs(accountAddr, tester1.address, 100);
+    expect(await erc20.balanceOf(accountAddr)).to.eq(700);
+    expect(await erc20.balanceOf(tester1.address)).to.eq(200);
+    expect(await erc20.balanceOf(tester2.address)).to.eq(100);
+    expect(await hre.ethers.provider.getBalance(hre.ethers.ZeroAddress)).to.eq(
+      ethAmount
+    );
+  });
+
+  it("should hold and transfer ERC20 and eth properly with two operators", async function () {
+    const { deployer, tester1, tester2 } = await hre.ethers.getNamedSigners();
+    const operators = hre.ethers.solidityPacked(
+      ["address", "address"],
+      [deployer.address, tester1.address]
+    );
+    const accountAddr = await getAccountAddr(admin, passkey, operators);
+
+    // receive erc20 before account created
+    const erc20 = await deployErc20(10000);
+    const erc20Addr = await erc20.getAddress();
+    await erc20.transfer(accountAddr, 1000);
+    expect(await erc20.balanceOf(accountAddr)).to.eq(1000);
+
+    // receive eth before account created
+    await deposit(deployer, accountAddr);
+    expect(await hre.ethers.provider.getBalance(accountAddr)).to.eq(
+      hre.ethers.parseEther("1.0")
+    );
+
+    // deploy account
+    const account = await deployAccount(admin, passkey, operators);
+
+    // transfer erc20 token
+    const erc20Data = erc20.interface.encodeFunctionData("transfer", [
+      tester1.address,
+      100,
+    ]);
+    const executeData = account.interface.encodeFunctionData("execute", [
+      erc20Addr,
+      0,
+      erc20Data,
+    ]);
+    await expect(
+      callAsOperators(accountAddr, [deployer, tester1], "0x", executeData, tester1)
+    )
       .to.emit(erc20, "Transfer")
-      .withArgs(accountAddr, tester2.address, 100);
+      .withArgs(accountAddr, tester1.address, 100);
+    expect(await erc20.balanceOf(accountAddr)).to.eq(900);
+    expect(await erc20.balanceOf(tester1.address)).to.eq(100);
+
+    // batch erc20 transfer with eth transfer
+    const erc20Data2 = erc20.interface.encodeFunctionData("transfer", [
+      tester2.address,
+      100,
+    ]);
+    const ethAmount = hre.ethers.parseEther("0.1");
+    const executeBatchData = account.interface.encodeFunctionData(
+      "executeBatch",
+      [
+        [erc20Addr, erc20Addr, hre.ethers.ZeroAddress],
+        [0, 0, ethAmount],
+        [erc20Data, erc20Data2, "0x"],
+      ]
+    );
+    await expect(
+      callAsOperators(accountAddr, [deployer, tester1], "0x", executeBatchData, tester1)
+    )
+      .to.emit(erc20, "Transfer")
+      .withArgs(accountAddr, tester1.address, 100);
     expect(await erc20.balanceOf(accountAddr)).to.eq(700);
     expect(await erc20.balanceOf(tester1.address)).to.eq(200);
     expect(await erc20.balanceOf(tester2.address)).to.eq(100);
