@@ -20,10 +20,16 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         genBytecode(await getArtifact(hre, "ZkAttestationVerifier"), verifierArgs),
         hre.ethers.ZeroHash,
     );
+
+    const {deployer} = await hre.ethers.getNamedSigners();
+    const registryArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address"],
+        [deployer.address],
+    );
     const registry = await deterministicDeploy(
         hre,
         "OpenId3KidRegistry",
-        genBytecode(await getArtifact(hre, "OpenId3KidRegistry"), "0x"),
+        genBytecode(await getArtifact(hre, "OpenId3KidRegistry"), registryArgs),
         hre.ethers.ZeroHash,
     );
 

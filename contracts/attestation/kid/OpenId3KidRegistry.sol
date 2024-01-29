@@ -17,6 +17,10 @@ contract OpenId3KidRegistry is IKidRegistry, Ownable {
     uint48 constant TTL = 24 * 60 * 60; // one day
     mapping(bytes32 => KidData) _kids;
 
+    constructor(address owner) {
+        _transferOwnership(owner);
+    }
+
     function setKid(bytes32 kid, KidData memory metadata) external onlyOwner {
         _kids[kid] = metadata;
         emit KidSet(kid, metadata);
