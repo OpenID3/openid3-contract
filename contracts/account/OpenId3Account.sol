@@ -21,7 +21,7 @@ library OpenId3AccountStorage {
 
     struct Layout {
         address admin;
-        bytes32 operator;
+        bytes32 operatorHash;
         uint8 mode;
     }
 
@@ -49,7 +49,7 @@ contract OpenId3Account is
     error WrongArrayLength();
 
     event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
-    event NewOperator(bytes32 indexed oldOperator, bytes32 indexed newOperator);
+    event NewOperators(bytes32 indexed operatorHash, bytes operators);
 
     IEntryPoint private immutable _entryPoint;
     address private immutable _defaultAdmin;
@@ -88,11 +88,11 @@ contract OpenId3Account is
 
     function initialize(
         bytes calldata adminData,
-        bytes32 operator,
+        bytes calldata operators,
         string calldata metadata
     ) public virtual override initializer {
         _setAdmin(address(bytes20(adminData[0:20])), adminData[20:]);
-        _setOperator(operator);
+        setOperators(operators);
         _metadata.setMetadata(metadata);
     }
 
@@ -106,7 +106,7 @@ contract OpenId3Account is
     }
 
     function getOperator() public view returns (bytes32) {
-        return OpenId3AccountStorage.layout().operator;
+        return OpenId3AccountStorage.layout().operatorHash;
     }
 
     function setAdmin(
@@ -118,12 +118,12 @@ contract OpenId3Account is
         emit NewAdmin(oldAdmin, admin);
     }
 
-    function setOperator(
-        bytes32 operator
+    function setOperators(
+        bytes calldata operators
     ) public onlyEntryPointOrSelf onlyAdminMode {
-        bytes32 oldOperator = getOperator();
-        _setOperator(operator);
-        emit NewOperator(oldOperator, operator);
+        bytes32 operatorHash = keccak256(abi.encodePacked(operators));
+        OpenId3AccountStorage.layout().operatorHash = operatorHash;
+        emit NewOperators(operatorHash, operators);
     }
 
     function _setAdmin(address newAdmin, bytes memory adminData) internal {
@@ -135,10 +135,6 @@ contract OpenId3Account is
         } else {
             OpenId3AccountStorage.layout().admin = newAdmin;
         }
-    }
-
-    function _setOperator(bytes32 operator) internal {
-        OpenId3AccountStorage.layout().operator = operator;
     }
 
     /** UUPSUpgradeable */

@@ -11,7 +11,7 @@ interface IOpenId3Account {
 
     function initialize(
         bytes calldata adminData,
-        bytes32 operator,
+        bytes calldata operator,
         string calldata metadata
     ) external;    
 }
