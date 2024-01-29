@@ -29,6 +29,7 @@ contract SocialAttestation is IAttestationAggregator {
         bytes calldata signature
     ) external override {
         if (!verifier.verify(input, signature)) {
+            console.log("invalid signature");
             revert InvalidAttestationSignature();
         }
         uint256 total = input.length / 104;

@@ -37,6 +37,7 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         ["address", "address"],
         [registry.address, zkverifier.address],
     );
+    console.log("args: ", args);
     await deterministicDeploy(
         hre,
         "SocialAttestation",

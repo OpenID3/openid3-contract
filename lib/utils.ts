@@ -58,13 +58,18 @@ export async function getZkAttestationVerifier(hre: HardhatRuntimeEnvironment) {
   const plonk = await getPlonkVerifier(hre);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address"],
-    [plonk.address]
+    [await plonk.getAddress()]
   );
   return await getDeployedContract(hre, "ZkAttestationVerifier", args);
 }
 
 export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "OpenId3KidRegistry");
+  const { deployer } = await hre.ethers.getNamedSigners();
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address"],
+    [deployer.address]
+  );
+  return await getDeployedContract(hre, "OpenId3KidRegistry", args);
 }
 
 export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
@@ -72,7 +77,7 @@ export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
   const registry = await getOpenId3KidRegistry(hre);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address", "address"],
-    [registry.address, verifier.address]
+    [await registry.getAddress(), await verifier.getAddress()]
   );
   return await getDeployedContract(hre, "SocialAttestation", args);
 }

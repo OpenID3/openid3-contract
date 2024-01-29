@@ -18,18 +18,18 @@ const epoch = () => {
 
 interface KidData {
   provider: number;
-  validUtil: number;
+  validUntil: number;
 }
 
 const kid1 = hre.ethers.hexlify(hre.ethers.randomBytes(32));
 const kidData1: KidData = {
   provider: 1,
-  validUtil: epoch() + 3600,
+  validUntil: epoch() + 3600,
 };
 const kid2 = hre.ethers.hexlify(hre.ethers.randomBytes(32));
 const kidData2: KidData = {
   provider: 2,
-  validUtil: epoch() + 3600,
+  validUntil: epoch() + 3600,
 };
 
 interface AttestationInput {
@@ -109,12 +109,28 @@ describe("OpenId3Account", function () {
       },
       {
         kid: kid2,
+        accountHash: keccak256("account1"),
+        payload,
+        iat: epoch(),
+      },
+      {
+        kid: kid1,
+        accountHash: keccak256("account2"),
+        payload,
+        iat: epoch(),
+      },
+      {
+        kid: kid2,
         accountHash: keccak256("account2"),
         payload,
         iat: epoch(),
       },
     ]);
-    await attestation.aggregate(input, [payload, payload], "0x");
+    await attestation.aggregate(
+      input,
+      [payload, payload, payload, payload],
+      "0x"
+    );
   });
 
   it("should vote in the same day", async function () {
@@ -137,7 +153,7 @@ describe("OpenId3Account", function () {
         iat: epoch(),
       },
       {
-        kid: kid2,
+        kid: kid1,
         accountHash: keccak256("account1"),
         payload: payload2,
         iat: epoch(),
