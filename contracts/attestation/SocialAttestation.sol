@@ -19,8 +19,8 @@ contract SocialAttestation is IAttestationAggregator {
     IKidRegistry immutable registry;
 
     constructor(address _registry, address _verifier) {
-        verifier = IAttestationVerifier(_verifier);
         registry = IKidRegistry(_registry);
+        verifier = IAttestationVerifier(_verifier);
     }
 
     function aggregate(

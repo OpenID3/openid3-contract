@@ -54,12 +54,39 @@ export async function getVeraxModule(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "OpenId3TeeModule");
 }
 
-export async function getAccountMetadata(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "AccountMetadata");
+export async function getZkAttestationVerifier(hre: HardhatRuntimeEnvironment) {
+  const plonk = await getPlonkVerifier(hre);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address"],
+    [plonk.address]
+  );
+  return await getDeployedContract(hre, "ZkAttestationVerifier", args);
+}
+
+export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "OpenId3KidRegistry");
+}
+
+export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
+  const verifier = await getZkAttestationVerifier(hre);
+  const registry = await getOpenId3KidRegistry(hre);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address", "address"],
+    [registry.address, verifier.address]
+  );
+  return await getDeployedContract(hre, "SocialAttestation", args);
+}
+
+export async function getSocialVoting(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "SocialVoting");
 }
 
 export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "AccountProxy");
+}
+
+export async function getAccountMetadata(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "AccountMetadata");
 }
 
 export async function getAccountImpl(hre: HardhatRuntimeEnvironment) {
