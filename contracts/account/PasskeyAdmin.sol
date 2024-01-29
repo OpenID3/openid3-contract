@@ -44,7 +44,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
     }
 
     function isValidSignature(
-        bytes32 challenge,
+        bytes32 userOpHash,
         bytes calldata validationData
     ) public view override returns(bytes4) {
         PasskeyValidationData memory data
@@ -52,7 +52,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
         if (_genKeyId(data.pubKey) != _passkeys[msg.sender]) {
             return 0xffffffff;
         }
-        string memory opHashBase64 = Base64.encode(bytes.concat(challenge));
+        string memory opHashBase64 = Base64.encode(bytes.concat(userOpHash));
         string memory clientDataJSON = string.concat(
             data.clientDataJsonPre,
             opHashBase64,

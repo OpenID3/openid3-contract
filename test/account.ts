@@ -3,17 +3,13 @@ import {
   getEntryPoint,
   getPasskeyAdmin,
   getAccountFactory,
-  getAccountManager,
+  getAccountMetadata,
+  getOpenId3Account,
+  genOperatorHash,
 } from "../lib/utils";
 import * as hre from "hardhat";
 import { AddressLike, Contract, Interface } from "ethers";
 import { getInterface } from "../lib/utils";
-import {
-  OpenId3Account__factory,
-  ERC20ForTest__factory,
-  ERC721ForTest__factory,
-  ERC1155ForTest__factory,
-} from "../types";
 import {
   genPasskey,
   buildPasskeyAdminData,
@@ -24,13 +20,13 @@ import {
 import { genInitCode, callAsOperator } from "../lib/userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-const metadata = hre.ethers.toUtf8Bytes("https://example.com");
+const metadataUrl = "ipfs://Qmxxxxx";
 
 describe("OpenId3Account", function () {
   let entrypoint: Contract;
   let admin: Contract;
   let factory: Contract;
-  let manager: Contract;
+  let metadata: Contract;
   let accountIface: Interface;
   let passkey: Passkey;
 
@@ -40,7 +36,8 @@ describe("OpenId3Account", function () {
       from: deployer.address,
       args: ["TestERC20", "TST", supply],
     });
-    return ERC20ForTest__factory.connect(deployed.address, deployer);
+    const artifact = await hre.artifacts.readArtifact("ERC20ForTest");
+    return new Contract(deployed.address, artifact.abi, deployer);
   };
 
   const deployErc721 = async () => {
@@ -49,7 +46,8 @@ describe("OpenId3Account", function () {
       from: deployer.address,
       args: ["TestErc721", "TST"],
     });
-    return ERC721ForTest__factory.connect(deployed.address, deployer);
+    const artifact = await hre.artifacts.readArtifact("ERC721ForTest");
+    return new Contract(deployed.address, artifact.abi, deployer);
   };
 
   const deployErc1155 = async () => {
@@ -59,10 +57,8 @@ describe("OpenId3Account", function () {
       log: true,
       autoMine: true,
     });
-    return ERC1155ForTest__factory.connect(
-      deployed.address,
-      hre.ethers.provider
-    );
+    const artifact = await hre.artifacts.readArtifact("ERC1155ForTest");
+    return new Contract(deployed.address, artifact.abi, deployer);
   };
 
   const getAccountAddr = async (admin: Contract, passkey: Passkey) => {
@@ -71,25 +67,33 @@ describe("OpenId3Account", function () {
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
       deployer.address,
-      metadata,
+      metadataUrl,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
     return await factory.predictClonedAddress(salt);
   };
 
-  const deployAccount = async (admin: Contract, passkey: Passkey) => {
+  const reconnect = async (account: Contract, signer: HardhatEthersSigner) => {
+    return getOpenId3Account(hre, await account.getAddress(), signer);
+  };
+
+  const deployAccount = async (
+    admin: Contract,
+    passkey: Passkey,
+    signer?: HardhatEthersSigner
+  ) => {
     const { deployer } = await hre.ethers.getNamedSigners();
     const adminData = buildPasskeyAdminData(admin, passkey);
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
       deployer.address,
-      metadata,
+      metadataUrl,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
     const cloned = await factory.predictClonedAddress(salt);
     await deposit(deployer, cloned);
     await factory.clone(accountInitData);
-    return OpenId3Account__factory.connect(cloned, deployer);
+    return getOpenId3Account(hre, cloned, signer ?? deployer);
   };
 
   const deposit = async (from: HardhatEthersSigner, to: AddressLike) => {
@@ -105,7 +109,7 @@ describe("OpenId3Account", function () {
     entrypoint = await getEntryPoint(hre);
     admin = await getPasskeyAdmin(hre);
     factory = await getAccountFactory(hre);
-    manager = await getAccountManager(hre);
+    metadata = await getAccountMetadata(hre);
     accountIface = await getInterface(hre, "OpenId3Account");
     passkey = genPasskey();
   });
@@ -116,7 +120,7 @@ describe("OpenId3Account", function () {
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
       deployer.address,
-      metadata,
+      metadataUrl,
     ]);
 
     const deployed = await factory.predictDeployedAddress(accountInitData);
@@ -124,10 +128,12 @@ describe("OpenId3Account", function () {
       .to.emit(factory, "AccountDeployed")
       .withArgs(deployed);
 
-    const account = OpenId3Account__factory.connect(deployed, deployer);
+    const account = await getOpenId3Account(hre, deployed, deployer);
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getOperatorHash()).to.eq(
+      genOperatorHash([deployer.address])
+    );
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -146,10 +152,10 @@ describe("OpenId3Account", function () {
       .to.emit(factory, "AccountDeployed")
       .withArgs(cloned);
 
-    const account = OpenId3Account__factory.connect(cloned, deployer);
+    const account = await getOpenId3Account(hre, cloned, deployer);
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(await manager.getAddress());
+    expect(await account.getOperatorHash()).to.eq(hre.ethers.keccak256("0x"));
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -164,7 +170,7 @@ describe("OpenId3Account", function () {
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
       deployer.address,
-      metadata,
+      metadataUrl,
     ]);
 
     const salt = hre.ethers.keccak256(accountInitData);
@@ -173,10 +179,12 @@ describe("OpenId3Account", function () {
       .to.emit(factory, "AccountDeployed")
       .withArgs(cloned);
 
-    const account = OpenId3Account__factory.connect(cloned, deployer);
+    const account = await getOpenId3Account(hre, cloned, deployer);
     expect(await account.getMode()).to.eq(0);
     expect(await account.getAdmin()).to.eq(await admin.getAddress());
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getOperatorHash()).to.eq(
+      genOperatorHash([deployer.address])
+    );
 
     const keyId = hre.ethers.solidityPackedKeccak256(
       ["uint256", "uint256"],
@@ -191,11 +199,10 @@ describe("OpenId3Account", function () {
     const accountInitData = accountIface.encodeFunctionData("initialize", [
       adminData,
       deployer.address,
-      metadata,
+      metadataUrl,
     ]);
     const salt = hre.ethers.keccak256(accountInitData);
     const account = await factory.predictClonedAddress(salt);
-    const accountContract = OpenId3Account__factory.connect(account, tester1);
     await deposit(deployer, account);
 
     const initCode = await genInitCode(
@@ -220,33 +227,42 @@ describe("OpenId3Account", function () {
     const { deployer, tester1 } = await hre.ethers.getNamedSigners();
     const account = await deployAccount(admin, passkey);
     expect(await account.getMode()).to.eq(0); // admin mode
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getOperatorHash()).to.eq(
+      genOperatorHash([deployer.address])
+    );
 
     // non-operator/non-admin cannot set operator
+    const acc1 = await reconnect(account, tester1);
     await expect(
-      account.connect(tester1).setOperator(tester1.address, "0x")
+      acc1.setOperators(tester1.address)
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
     expect(await account.getMode()).to.eq(0); // admin mode
     // operator should not be updated
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getOperatorHash()).to.eq(
+      genOperatorHash([deployer.address])
+    );
 
     // current operator can not set operator directly
     await expect(
-      account.connect(deployer).setOperator(tester1.address, "0x")
+      account.setOperators(tester1.address)
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
     expect(await account.getMode()).to.eq(0); // admin mode
-    expect(await account.getOperator()).to.eq(deployer.address);
+    expect(await account.getOperatorHash()).to.eq(
+      genOperatorHash([deployer.address])
+    );
 
     // current operator cannot set operator via ERC-4337
     const accountAddr = await account.getAddress();
-    const setOperatorData1 = accountIface.encodeFunctionData("setOperator", [
-      tester1.address,
-      "0x",
+    const newOperators = hre.ethers.solidityPacked(
+      ["address", "address"],
+      [tester1.address, deployer.address]
+    );
+    const setOperatorData1 = accountIface.encodeFunctionData("setOperators", [
+      newOperators,
     ]);
     await expect(
       callAsOperator(accountAddr, deployer, "0x", setOperatorData1, deployer)
     ).to.emit(entrypoint, "UserOperationRevertReason");
-    expect(await account.getOperator()).to.eq(deployer.address);
     expect(await account.getMode()).to.eq(1); // operator mode
 
     // operator can not reset operator via ERC-4337 execute
@@ -258,34 +274,38 @@ describe("OpenId3Account", function () {
     await expect(
       callAsOperator(accountAddr, deployer, "0x", executeData1, tester1)
     ).to.emit(entrypoint, "UserOperationRevertReason");
-    expect(await account.getOperator()).to.eq(deployer.address);
     expect(await account.getMode()).to.eq(1); // operator mode
 
     // admin can reset operator
+    const opHash = hre.ethers.keccak256(newOperators);
     await expect(
       callFromPasskey(accountAddr, passkey, "0x", setOperatorData1, tester1)
     )
-      .to.emit(account, "NewOperator")
-      .withArgs(deployer.address, tester1.address);
-    expect(await account.getOperator()).to.eq(tester1.address);
+      .to.emit(account, "NewOperators")
+      .withArgs(opHash, newOperators);
+    expect(await account.getOperatorHash()).to.eq(opHash);
     expect(await account.getMode()).to.eq(0); // admin mode
 
     // admin can set operator via EIP-4337 execute
-    const setOperatorData2 = accountIface.encodeFunctionData("setOperator", [
-      deployer.address,
-      "0x",
+    const newOperators2 = hre.ethers.solidityPacked(
+      ["address", "address"],
+      [deployer.address, tester1.address]
+    );
+    const setOperatorData2 = accountIface.encodeFunctionData("setOperators", [
+      newOperators2,
     ]);
     const executeData2 = account.interface.encodeFunctionData("execute", [
       accountAddr,
       0,
       setOperatorData2,
     ]);
+    const opHash2 = hre.ethers.keccak256(newOperators2);
     await expect(
       callFromPasskey(accountAddr, passkey, "0x", executeData2, tester1)
     )
-      .to.emit(account, "NewOperator")
-      .withArgs(tester1.address, deployer.address);
-    expect(await account.getOperator()).to.eq(deployer.address);
+      .to.emit(account, "NewOperators")
+      .withArgs(opHash2, newOperators2);
+    expect(await account.getOperatorHash()).to.eq(opHash2);
     expect(await account.getMode()).to.eq(0); // admin mode
   });
 
@@ -304,14 +324,9 @@ describe("OpenId3Account", function () {
       [passkey2.pubKeyX, passkey2.pubKeyY]
     );
 
-    // tester cannot set admin
+    // operator can not set admin directly
     await expect(
-      account.connect(tester1).setAdmin(adminAddr, newAdminData)
-    ).to.be.revertedWithCustomError(account, "NotAuthorized");
-
-    // operator can not set admin
-    await expect(
-      account.connect(tester1).setAdmin(adminAddr, newAdminData)
+      account.setAdmin(adminAddr, newAdminData)
     ).to.be.revertedWithCustomError(account, "NotAuthorized");
 
     let setAdminData = accountIface.encodeFunctionData("setAdmin", [
@@ -340,7 +355,10 @@ describe("OpenId3Account", function () {
     // operator cannot set admin via EIP-4337 execute, but the mode
     // will be updated since validateSignature is called
     const adminData = buildPasskeyAdminCallData(admin, passkey);
-    setAdminData = accountIface.encodeFunctionData("setAdmin", [adminAddr, adminData]);
+    setAdminData = accountIface.encodeFunctionData("setAdmin", [
+      adminAddr,
+      adminData,
+    ]);
     const executeData = account.interface.encodeFunctionData("execute", [
       accountAddr,
       0,
@@ -379,7 +397,7 @@ describe("OpenId3Account", function () {
         args: [
           await account.entryPoint(),
           await admin.getAddress(),
-          await manager.getAddress(),
+          await metadata.getAddress(),
         ],
       })
     ).address;
@@ -394,13 +412,15 @@ describe("OpenId3Account", function () {
     ).to.be.revertedWithCustomError(accountProxy, "AlreadyInitiated");
 
     // cannot upgrade without EIP-4337
-    await expect(
-      account.connect(deployer).upgradeTo(newImpl)
-    ).to.be.revertedWithCustomError(account, "NotAuthorized");
+    await expect(account.upgradeTo(newImpl)).to.be.revertedWithCustomError(
+      account,
+      "NotAuthorized"
+    );
 
     // operator cannot upgrade
-    const upgradeData = account.interface.encodeFunctionData(
-      "upgradeTo", [newImpl]);
+    const upgradeData = account.interface.encodeFunctionData("upgradeTo", [
+      newImpl,
+    ]);
     const executeData = account.interface.encodeFunctionData("execute", [
       accountAddr,
       0,
@@ -429,7 +449,7 @@ describe("OpenId3Account", function () {
     // receive erc20 before account created
     const erc20 = await deployErc20(10000);
     const erc20Addr = await erc20.getAddress();
-    await erc20.connect(deployer).transfer(accountAddr, 1000);
+    await erc20.transfer(accountAddr, 1000);
     expect(await erc20.balanceOf(accountAddr)).to.eq(1000);
 
     // receive eth before account created
@@ -494,9 +514,7 @@ describe("OpenId3Account", function () {
 
     // receive erc721 before account created
     const erc721 = await deployErc721();
-    await expect(
-      erc721.connect(deployer).transferFrom(deployer.address, accountAddr, 0)
-    )
+    await expect(erc721.transferFrom(deployer.address, accountAddr, 0))
       .to.emit(erc721, "Transfer")
       .withArgs(deployer.address, accountAddr, 0);
     expect(await erc721.ownerOf(0)).to.eq(accountAddr);
@@ -505,9 +523,7 @@ describe("OpenId3Account", function () {
     const account = await deployAccount(admin, passkey);
 
     // receive erc721 after account created
-    await expect(
-      erc721.connect(deployer).transferFrom(deployer.address, accountAddr, 1)
-    )
+    await expect(erc721.transferFrom(deployer.address, accountAddr, 1))
       .to.emit(erc721, "Transfer")
       .withArgs(deployer.address, accountAddr, 1);
     expect(await erc721.ownerOf(1)).to.eq(accountAddr);
@@ -538,9 +554,7 @@ describe("OpenId3Account", function () {
     // receive erc1155 before account created
     const erc1155 = await deployErc1155();
     await expect(
-      erc1155
-        .connect(deployer)
-        .safeTransferFrom(deployer.address, accountAddr, 1, 10, "0x")
+      erc1155.safeTransferFrom(deployer.address, accountAddr, 1, 10, "0x")
     )
       .to.emit(erc1155, "TransferSingle")
       .withArgs(deployer.address, deployer.address, accountAddr, 1, 10);
@@ -551,9 +565,7 @@ describe("OpenId3Account", function () {
 
     // receive erc1155 after account created
     await expect(
-      erc1155
-        .connect(deployer)
-        .safeTransferFrom(deployer.address, accountAddr, 1, 10, "0x")
+      erc1155.safeTransferFrom(deployer.address, accountAddr, 1, 10, "0x")
     )
       .to.emit(erc1155, "TransferSingle")
       .withArgs(deployer.address, deployer.address, accountAddr, 1, 10);

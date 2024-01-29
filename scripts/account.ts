@@ -7,7 +7,7 @@ export async function inspect(accountAddr: string) {
 
   const account = OpenId3Account__factory.connect(accountAddr, deployer);
   const admin = await account.getAdmin();
-  const operator = await account.getOperator();
+  const operator = await account.getOperatorHash();
   console.log("Admin is: ", admin);
   console.log("Operator is: ", operator);
 

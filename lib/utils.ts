@@ -1,10 +1,11 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { Contract } from "ethers";
+import { Contract, ethers } from "ethers";
 import {
   getDeterministicDeployer,
   getEntryPointAddress,
   genBytecode,
 } from "./deployer";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 export async function getAbi(hre: HardhatRuntimeEnvironment, contract: string) {
   const artifact = await hre.artifacts.readArtifact(contract);
@@ -53,17 +54,8 @@ export async function getVeraxModule(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "OpenId3TeeModule");
 }
 
-export async function getGoogleZkAdmin(hre: HardhatRuntimeEnvironment) {
-  const verifier = await getPlonkVerifier(hre);
-  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address"],
-    [await verifier.getAddress()]
-  );
-  return await getDeployedContract(hre, "GoogleZkAdmin", args);
-}
-
-export async function getAccountManager(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "AccountManager");
+export async function getAccountMetadata(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "AccountMetadata");
 }
 
 export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
@@ -73,11 +65,11 @@ export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
 export async function getAccountImpl(hre: HardhatRuntimeEnvironment) {
   const admin = await getPasskeyAdmin(hre);
   const adminAddr = await admin.getAddress();
-  const manager = await getAccountManager(hre);
-  const managerAddr = await manager.getAddress();
+  const metadata = await getAccountMetadata(hre);
+  const metadataAddr = await metadata.getAddress();
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address", "address", "address"],
-    [getEntryPointAddress(), adminAddr, managerAddr]
+    [getEntryPointAddress(), adminAddr, metadataAddr]
   );
   return await getDeployedContract(hre, "OpenId3Account", args);
 }
@@ -98,5 +90,21 @@ export async function getEntryPoint(hre: HardhatRuntimeEnvironment) {
     getEntryPointAddress(),
     await getAbi(hre, "EntryPoint"),
     deployer
+  );
+}
+
+export const getOpenId3Account = async (
+  hre: HardhatRuntimeEnvironment,
+  account: string,
+  deployer?: HardhatEthersSigner
+) => {
+  const artifact = await hre.artifacts.readArtifact("OpenId3Account");
+  return new Contract(account, artifact.abi, deployer ?? hre.ethers.provider);
+};
+
+export const genOperatorHash = (ops: string[]) => {
+  return ethers.solidityPackedKeccak256(
+    ops.map(() => "address"),
+    ops
   );
 }

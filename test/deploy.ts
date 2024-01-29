@@ -1,4 +1,3 @@
-import { Contract, ethers, keccak256 } from "ethers";
 import * as hre from "hardhat";
 import { TestContractFactory, TestContractFactory__factory } from "../types";
 
@@ -20,7 +19,7 @@ describe("TestContractFactory", function () {
 
 
   it("should deploy contract", async function () {
-    await factory.deploy(ethers.ZeroHash);
-    await factory.deploy(ethers.keccak256(ethers.toUtf8Bytes("hello")));
+    await factory.deploy(hre.ethers.ZeroHash);
+    await factory.deploy(hre.ethers.keccak256(hre.ethers.toUtf8Bytes("hello")));
   });
 });

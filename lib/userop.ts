@@ -1,8 +1,7 @@
 import { AddressLike, BigNumberish, BytesLike, Contract, ethers } from "ethers";
-import { OpenId3Account__factory } from "../types";
 import * as hre from "hardhat";
 import { getEntryPointAddress } from "./deployer";
-import { getEntryPoint } from "./utils";
+import { getEntryPoint, getOpenId3Account } from "./utils";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 export type UserOperationStruct = {
@@ -64,12 +63,13 @@ export const callWithEntryPoint = async (
 };
 
 const getNonce = async (sender: string) => {
-  const account = OpenId3Account__factory.connect(sender, hre.ethers.provider);
+  const account = await getOpenId3Account(hre, sender);
   if ((await hre.ethers.provider.getCode(sender)) === "0x") {
     return 0;
   }
   return (await account.getNonce()) as BigNumberish;
 };
+
 
 export const genUserOp = async (
   sender: string,
@@ -132,24 +132,6 @@ export const genUserOpHash = async (op: UserOperationStruct) => {
   );
 };
 
-export async function callAsAccountManager(
-  sender: string,
-  operator: ethers.Signer,
-  initCode: string,
-  callData: string,
-  signer: HardhatEthersSigner,
-  log?: boolean
-) {
-  const userOp = await genUserOp(sender, initCode, callData);
-  const userOpHash = await genUserOpHash(userOp);
-  const signature = await operator.signMessage(ethers.getBytes(userOpHash));
-  userOp.signature = ethers.solidityPacked(
-    ["uint8", "address", "bytes"],
-    [1, await operator.getAddress(), signature]
-  );
-  return callWithEntryPoint(userOp, signer, log ?? false);
-}
-
 export async function callAsOperator(
   sender: string,
   operator: ethers.Signer,
@@ -158,12 +140,38 @@ export async function callAsOperator(
   signer: HardhatEthersSigner,
   log?: boolean
 ) {
+  return callAsOperators(sender, [operator], initCode, callData, signer, log);
+}
+
+export async function callAsOperators(
+  sender: string,
+  operators: ethers.Signer[],
+  initCode: string,
+  callData: string,
+  signer: HardhatEthersSigner,
+  log?: boolean
+) {
   const userOp = await genUserOp(sender, initCode, callData);
   const userOpHash = await genUserOpHash(userOp);
-  const signature = await operator.signMessage(ethers.getBytes(userOpHash));
+  const addresses = await Promise.all(
+    operators.map((operator) => operator.getAddress())
+  );
+  const sigs = await Promise.all(
+    operators.map((operator) =>
+      operator.signMessage(ethers.getBytes(userOpHash))
+    )
+  );
+  const addressPacked = ethers.solidityPacked(
+    addresses.map(a => "address"),
+    addresses,
+  );
+  const sigPacked = ethers.solidityPacked(
+    sigs.map(op => "bytes"),
+    sigs,
+  );
   userOp.signature = ethers.solidityPacked(
-    ["uint8", "bytes"],
-    [1, signature]
+    ["uint8", "bytes" ,"bytes"],
+    [1, addressPacked, sigPacked],
   );
   return callWithEntryPoint(userOp, signer, log ?? false);
 }

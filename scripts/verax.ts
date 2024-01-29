@@ -1,7 +1,6 @@
 import { ethers } from "ethers";
 import * as hre from "hardhat";
 import * as fs from "fs";
-import { OpenId3TeeModule__factory } from "../types";
 
 const LINEA_TEST_CONTRACTS = {
   schema_registry: "0xB2c4Da1f8F08A0CA25862509E5431289BE2b598B",
@@ -246,7 +245,8 @@ export async function searchAttestation() {
     return;
   }
   console.log(logs);
-  const iface = OpenId3TeeModule__factory.createInterface();
+  const artifact = await hre.artifacts.readArtifact("OpenId3TeeModule");
+  const iface = new ethers.Interface(artifact.abi);
   const event = iface.parseLog({
     topics: Array.from(logs[0].topics),
     data: logs[0].data,

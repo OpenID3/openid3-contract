@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import * as hre from "hardhat";
-import { MerkleVerifier, MerkleVerifier__factory } from "../types";
-import { ethers, sha256 } from "ethers";
+import { Contract, ethers, sha256 } from "ethers";
 import { StandardMerkleTree } from "merkle-tree";
 
 function hash(value: string) {
@@ -18,7 +17,7 @@ const values = [
 ];
 
 describe("OpenId3Account", function () {
-  let verifier: MerkleVerifier;
+  let verifier: Contract;
 
   beforeEach(async function () {
     const { deployer } = await hre.ethers.getNamedSigners();
@@ -26,7 +25,8 @@ describe("OpenId3Account", function () {
       from: deployer.address,
       args: [],
     });
-    verifier = MerkleVerifier__factory.connect(deployed.address, deployer);
+    const artifact = await hre.artifacts.readArtifact("MerkleVerifier");
+    verifier = new Contract(deployed.address, artifact.abi, deployer);
   });
 
   it("should gen and verify merkle", async function () {

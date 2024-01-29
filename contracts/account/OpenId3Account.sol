@@ -92,7 +92,7 @@ contract OpenId3Account is
         string calldata metadata
     ) public virtual override initializer {
         _setAdmin(address(bytes20(adminData[0:20])), adminData[20:]);
-        setOperators(operators);
+        _setOperators(operators);
         _metadata.setMetadata(metadata);
     }
 
@@ -105,7 +105,7 @@ contract OpenId3Account is
         return admin == address(0) ? _defaultAdmin : admin;
     }
 
-    function getOperator() public view returns (bytes32) {
+    function getOperatorHash() public view returns (bytes32) {
         return OpenId3AccountStorage.layout().operatorHash;
     }
 
@@ -121,6 +121,10 @@ contract OpenId3Account is
     function setOperators(
         bytes calldata operators
     ) public onlyEntryPointOrSelf onlyAdminMode {
+        _setOperators(operators);
+    }
+
+    function _setOperators(bytes calldata operators) internal {
         bytes32 operatorHash = keccak256(abi.encodePacked(operators));
         OpenId3AccountStorage.layout().operatorHash = operatorHash;
         emit NewOperators(operatorHash, operators);
@@ -175,14 +179,13 @@ contract OpenId3Account is
         bytes32 uoHash
     ) internal virtual override returns (uint256 validationData) {
         uint8 mode = uint8(userOp.signature[0]);
-        bytes32 message = uoHash.toEthSignedMessageHash();
         OpenId3AccountStorage.layout().mode = mode;
         if (mode == 0x00) {
             // admin mode
             return
                 SignatureChecker.isValidSignatureNow(
                     getAdmin(),
-                    message,
+                    uoHash,
                     userOp.signature[1:]
                 )
                     ? 0
@@ -191,8 +194,8 @@ contract OpenId3Account is
             // operator mode
             return
                 _validateOperatorSig(
-                    getOperator(),
-                    message,
+                    getOperatorHash(),
+                    uoHash.toEthSignedMessageHash(),
                     userOp.signature[1:]
                 )
                     ? 0
@@ -203,12 +206,12 @@ contract OpenId3Account is
     }
 
     function _validateOperatorSig(
-        bytes32 operator,
+        bytes32 operatorHash,
         bytes32 message,
         bytes calldata signature
     ) internal view returns (bool) {
         uint256 totalOps = signature.length / 85;
-        if (keccak256(signature[0:totalOps * 20]) != operator) {
+        if (keccak256(signature[0:totalOps * 20]) != operatorHash) {
             return false;
         }
         for (uint i = 0; i < totalOps; i++) {
