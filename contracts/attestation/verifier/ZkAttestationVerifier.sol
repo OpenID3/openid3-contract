@@ -21,7 +21,12 @@ contract ZkAttestationVerifier is IAttestationVerifier {
         bytes calldata inputs,
         bytes calldata signature
     ) override external view returns (bool) {
-        bytes32 inputHashMasked = sha256(inputs) & MASK;
+        bytes memory hashes = "";
+        uint256 total = inputs.length / 104;
+        for (uint i = 0; i < total; i++) {
+            hashes = bytes.concat(hashes, sha256(inputs[i * 104: i * 104 + 104]));
+        }
+        bytes32 inputHashMasked = sha256(hashes) & MASK;
         bytes32 circuitDigest = bytes32(signature[0:32]);
         uint256[] memory publicInputs = new uint256[](2);
         publicInputs[0] = uint256(circuitDigest);
