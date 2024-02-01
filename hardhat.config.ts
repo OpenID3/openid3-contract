@@ -41,6 +41,11 @@ const config: HardhatUserConfig = {
       url: "https://ethereum-sepolia.publicnode.com",
       accounts,
     },
+    mumbai: {
+      chainId: 80001,
+      url: "https://polygon-mumbai-bor.publicnode.com",
+      accounts,
+    },
     linea: {
       chainId: 59144,
       url: "https://linea-mainnet.infura.io/v3/" + process.env.INFURA_API_KEY!,
