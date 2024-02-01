@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/interfaces/IERC165.sol";
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/samples/callback/TokenCallbackHandler.sol";
 
-import "../interfaces/IAccountMetadata.sol";
+import "../interfaces/IAccountEventIndexer.sol";
 import "../interfaces/IOpenId3Account.sol";
 
 library OpenId3AccountStorage {
@@ -48,12 +48,9 @@ contract OpenId3Account is
     error InvalidMode(uint8 mode);
     error WrongArrayLength();
 
-    event NewAdmin(address indexed oldAdmin, address indexed newAdmin);
-    event NewOperators(bytes32 indexed operatorHash, bytes operators);
-
     IEntryPoint private immutable _entryPoint;
     address private immutable _defaultAdmin;
-    IAccountMetadata private immutable _metadata;
+    IAccountEventIndexer private immutable _indexer;
 
     modifier onlyEntryPointOrSelf() {
         if (
@@ -71,10 +68,10 @@ contract OpenId3Account is
         _;
     }
 
-    constructor(address entryPoint_, address admin_, address metadata_) {
+    constructor(address entryPoint_, address admin_, address indexer_) {
         _entryPoint = IEntryPoint(entryPoint_);
         _defaultAdmin = admin_;
-        _metadata = IAccountMetadata(metadata_);
+        _indexer = IAccountEventIndexer(indexer_);
         _disableInitializers();
     }
 
@@ -93,7 +90,7 @@ contract OpenId3Account is
     ) public virtual override initializer {
         _setAdmin(address(bytes20(adminData[0:20])), adminData[20:]);
         _setOperators(operators);
-        _metadata.setMetadata(metadata);
+        _setMetadata(metadata);
     }
 
     function getMode() external view override returns (uint8) {
@@ -113,9 +110,20 @@ contract OpenId3Account is
         address admin,
         bytes memory adminData
     ) public onlyEntryPointOrSelf onlyAdminMode {
-        address oldAdmin = getAdmin();
         _setAdmin(admin, adminData);
-        emit NewAdmin(oldAdmin, admin);
+    }
+
+    function _setAdmin(address newAdmin, bytes memory adminData) internal {
+        address oldAdmin = getAdmin();
+        if (adminData.length > 0) {
+            _call(newAdmin, 0, adminData);
+        }
+        if (newAdmin == _defaultAdmin) {
+            OpenId3AccountStorage.layout().admin = address(0);
+        } else {
+            OpenId3AccountStorage.layout().admin = newAdmin;
+        }
+        _indexer.newAdmin(oldAdmin, newAdmin);
     }
 
     function setOperators(
@@ -127,18 +135,17 @@ contract OpenId3Account is
     function _setOperators(bytes calldata operators) internal {
         bytes32 operatorHash = keccak256(abi.encodePacked(operators));
         OpenId3AccountStorage.layout().operatorHash = operatorHash;
-        emit NewOperators(operatorHash, operators);
+        _indexer.newOperators(operatorHash, operators);
     }
 
-    function _setAdmin(address newAdmin, bytes memory adminData) internal {
-        if (adminData.length > 0) {
-            _call(newAdmin, 0, adminData);
-        }
-        if (newAdmin == _defaultAdmin) {
-            OpenId3AccountStorage.layout().admin = address(0);
-        } else {
-            OpenId3AccountStorage.layout().admin = newAdmin;
-        }
+    function setMetadata(
+        string calldata metadata
+    ) public onlyEntryPointOrSelf onlyAdminMode {
+        _setMetadata(metadata);
+    }
+
+    function _setMetadata(string calldata metadata) internal {
+        _indexer.newMetadata(metadata);
     }
 
     /** UUPSUpgradeable */

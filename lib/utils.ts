@@ -90,15 +90,15 @@ export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "AccountProxy");
 }
 
-export async function getAccountMetadata(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "AccountMetadata");
+export async function getAccountEventIndexer(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "AccountEventIndexer");
 }
 
 export async function getAccountImpl(hre: HardhatRuntimeEnvironment) {
   const admin = await getPasskeyAdmin(hre);
   const adminAddr = await admin.getAddress();
-  const metadata = await getAccountMetadata(hre);
-  const metadataAddr = await metadata.getAddress();
+  const indexer = await getAccountEventIndexer(hre);
+  const metadataAddr = await indexer.getAddress();
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address", "address", "address"],
     [getEntryPointAddress(), adminAddr, metadataAddr]

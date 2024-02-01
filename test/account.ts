@@ -3,7 +3,7 @@ import {
   getEntryPoint,
   getPasskeyAdmin,
   getAccountFactory,
-  getAccountMetadata,
+  getAccountEventIndexer,
   getOpenId3Account,
   genOperatorHash,
 } from "../lib/utils";
@@ -26,7 +26,7 @@ describe("OpenId3Account", function () {
   let entrypoint: Contract;
   let admin: Contract;
   let factory: Contract;
-  let metadata: Contract;
+  let indexer: Contract;
   let accountIface: Interface;
   let passkey: Passkey;
 
@@ -109,7 +109,7 @@ describe("OpenId3Account", function () {
     entrypoint = await getEntryPoint(hre);
     admin = await getPasskeyAdmin(hre);
     factory = await getAccountFactory(hre);
-    metadata = await getAccountMetadata(hre);
+    indexer = await getAccountEventIndexer(hre);
     accountIface = await getInterface(hre, "OpenId3Account");
     passkey = genPasskey();
   });
@@ -281,8 +281,8 @@ describe("OpenId3Account", function () {
     await expect(
       callFromPasskey(accountAddr, passkey, "0x", setOperatorData1, tester1)
     )
-      .to.emit(account, "NewOperators")
-      .withArgs(opHash, newOperators);
+      .to.emit(indexer, "NewOperators")
+      .withArgs(accountAddr, opHash, newOperators);
     expect(await account.getOperatorHash()).to.eq(opHash);
     expect(await account.getMode()).to.eq(0); // admin mode
 
@@ -303,8 +303,8 @@ describe("OpenId3Account", function () {
     await expect(
       callFromPasskey(accountAddr, passkey, "0x", executeData2, tester1)
     )
-      .to.emit(account, "NewOperators")
-      .withArgs(opHash2, newOperators2);
+      .to.emit(indexer, "NewOperators")
+      .withArgs(accountAddr, opHash2, newOperators2);
     expect(await account.getOperatorHash()).to.eq(opHash2);
     expect(await account.getMode()).to.eq(0); // admin mode
   });
@@ -397,7 +397,7 @@ describe("OpenId3Account", function () {
         args: [
           await account.entryPoint(),
           await admin.getAddress(),
-          await metadata.getAddress(),
+          await indexer.getAddress(),
         ],
       })
     ).address;

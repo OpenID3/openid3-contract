@@ -13,8 +13,8 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
 
     const metadata = await deterministicDeploy(
         hre,
-        "AccountMetadata",
-        genBytecode(await getArtifact(hre, "AccountMetadata"), "0x"),
+        "AccountEventIndexer",
+        genBytecode(await getArtifact(hre, "AccountEventIndexer"), "0x"),
         hre.ethers.ZeroHash,
     );
 
