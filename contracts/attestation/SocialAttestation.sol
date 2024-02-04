@@ -3,11 +3,11 @@
 pragma solidity ^0.8.20;
 
 import "./IAttestationAggregator.sol";
-import "./IAttestationConsumer.sol";
 
 import "./kid/IKidRegistry.sol";
 import "./struct/AttestationLib.sol";
 import "./verifier/IAttestationVerifier.sol";
+import "./consumer/IAttestationConsumer.sol";
 
 contract SocialAttestation is IAttestationAggregator {
     event NewAttestationEvent(address indexed consumer, AttestationEvent e);

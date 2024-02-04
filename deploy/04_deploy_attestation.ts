@@ -38,17 +38,28 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         ["address", "address"],
         [registry.address, zkverifier.address],
     );
-    await deterministicDeploy(
+    const attestation = await deterministicDeploy(
         hre,
         "SocialAttestation",
         genBytecode(await getArtifact(hre, "SocialAttestation"), args),
         hre.ethers.ZeroHash,
     );
 
+    const consumerArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address"],
+        [attestation.address],
+    );
     await deterministicDeploy(
         hre,
         "SocialVoting",
-        genBytecode(await getArtifact(hre, "SocialVoting"), args),
+        genBytecode(await getArtifact(hre, "SocialVoting"), consumerArgs),
+        hre.ethers.ZeroHash,
+    );
+
+    await deterministicDeploy(
+        hre,
+        "SocialVerification",
+        genBytecode(await getArtifact(hre, "SocialVerification"), consumerArgs),
         hre.ethers.ZeroHash,
     );
 }

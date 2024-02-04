@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.20;
 
-import "./IAttestationConsumer.sol";
+import "./AttestationConsumer.sol";
 
-contract SocialVerification is IAttestationConsumer {
+contract SocialVerification is AttestationConsumer {
     error AlreadyVerified();
 
     event NewVerification(uint256 indexed from, address indexed subject, uint64 iat);
@@ -16,7 +16,9 @@ contract SocialVerification is IAttestationConsumer {
 
     mapping(uint256 => VerificationData) _verified;
 
-    function onNewAttestation(AttestationEvent calldata e) external override {
+    constructor(address allowed) AttestationConsumer(allowed) { }
+
+    function _onNewAttestation(AttestationEvent calldata e) internal override {
         if (_verified[e.from].to != address(0)) {
             revert AlreadyVerified();
         }
@@ -25,7 +27,9 @@ contract SocialVerification is IAttestationConsumer {
         emit NewVerification(e.from, to, e.iat);
     }
 
-    function getVerifiedAddress(uint256 account) external view returns (VerificationData memory) {
+    function getVerifiedAddress(
+        uint256 account
+    ) external view returns (VerificationData memory) {
         return _verified[account];
     }
 }

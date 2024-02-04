@@ -2,15 +2,17 @@
 
 pragma solidity ^0.8.20;
 
-import "./IAttestationConsumer.sol";
+import "./AttestationConsumer.sol";
 
-contract SocialVoting is IAttestationConsumer {
+contract SocialVoting is AttestationConsumer {
     event NewVote(uint256 from, address to, uint256 day);
 
     mapping(uint256 => mapping(uint256 => bool)) _voted;
     mapping(address => mapping(uint256 => uint256)) _history;
 
-    function onNewAttestation(AttestationEvent calldata e) external override {
+    constructor(address allowed) AttestationConsumer(allowed) { }
+
+    function _onNewAttestation(AttestationEvent calldata e) internal override {
         uint256 day = e.iat / 86400;
         if (_voted[e.from][day]) {
             return;
@@ -25,7 +27,11 @@ contract SocialVoting is IAttestationConsumer {
         return _voted[from][day];
     }
 
-    function totalVoted(uint256 from, uint256 start, uint256 numOfDays) external view returns (uint256) {
+    function totalVoted(
+        uint256 from,
+        uint256 start,
+        uint256 numOfDays
+    ) external view returns (uint256) {
         uint256 total = 0;
         for (uint i = start; i < start + numOfDays; i++) {
             if (_voted[from][i]) {
@@ -35,7 +41,11 @@ contract SocialVoting is IAttestationConsumer {
         return total;
     }
 
-    function totalConsecutiveVoted(uint256 from, uint256 start, uint256 numOfDays) external view returns (uint256) {
+    function totalConsecutiveVoted(
+        uint256 from,
+        uint256 start,
+        uint256 numOfDays
+    ) external view returns (uint256) {
         uint256 total = 0;
         for (uint i = start; i < start + numOfDays; i++) {
             if (_voted[from][i]) {
