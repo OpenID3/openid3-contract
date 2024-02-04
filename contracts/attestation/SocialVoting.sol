@@ -11,16 +11,14 @@ contract SocialVoting is IAttestationConsumer {
     mapping(address => mapping(uint256 => uint256)) _history;
 
     function onNewAttestation(AttestationEvent calldata e) external override {
-        if (e.statement != bytes32(0)) {
-            return;
-        }
         uint256 day = e.iat / 86400;
         if (_voted[e.from][day]) {
             return;
         }
-        _history[e.to][day] = _history[e.to][day] + 1;
+        address to = address(bytes20(e.data));
+        _history[to][day] = _history[to][day] + 1;
         _voted[e.from][day] = true;
-        emit NewVote(e.from, e.to, day);
+        emit NewVote(e.from, to, day);
     }
 
     function isVoted(uint256 from, uint256 day) external view returns (bool) {

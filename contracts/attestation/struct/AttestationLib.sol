@@ -7,6 +7,7 @@ import "../kid/IKidRegistry.sol";
 
 library AttestationLib {
     error AttestationPayloadHashMismatch();
+    error AttestationPayloadsLengthMismatch();
     error InvalidAccountProvider();
 
     // input is with 108 bytes:
@@ -14,15 +15,18 @@ library AttestationLib {
     //   bytes32: accountIdHash
     //   bytes32: nonce
     //   bytes8(uint64): iat
-    function decodeOneAttestation(
+    function validateAndDecodeOneAttestation(
         bytes calldata input,
         AttestationPayload calldata payload,
         IKidRegistry registry
-    ) internal view returns (AttestationEvent memory) {
+    ) internal view returns (uint256, uint64) {
         bytes32 kid = bytes32(input[0:32]);
         uint32 provider = registry.getProvider(kid);
         if (provider == 0) {
             revert InvalidAccountProvider();
+        }
+        if (payload.data.length != payload.consumers.length) {
+            revert AttestationPayloadsLengthMismatch();
         }
         // take last 20 bytes of accountIdHash as address for provider
         address account = address(bytes20(input[44:64]));
@@ -32,7 +36,7 @@ library AttestationLib {
             revert AttestationPayloadHashMismatch();
         }
         uint64 iat = uint64(bytes8(input[96:104]));
-        return AttestationEvent(from, payload.to, iat, payload.statement);
+        return (from, iat);
     }
 
     function encodeSocialAccountId(

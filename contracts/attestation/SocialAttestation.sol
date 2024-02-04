@@ -10,7 +10,7 @@ import "./struct/AttestationLib.sol";
 import "./verifier/IAttestationVerifier.sol";
 
 contract SocialAttestation is IAttestationAggregator {
-    event NewAttestationEvent(AttestationEvent e);
+    event NewAttestationEvent(address indexed consumer, AttestationEvent e);
 
     error InvalidAttestationSignature();
     error AttestationPayloadsLengthMismatch();
@@ -36,14 +36,21 @@ contract SocialAttestation is IAttestationAggregator {
             revert AttestationPayloadsLengthMismatch();
         }
         for (uint i = 0; i < total; i++) {
-            AttestationEvent memory e = AttestationLib.decodeOneAttestation(
+            (uint256 from, uint64 iat) = AttestationLib.validateAndDecodeOneAttestation(
                 input[104 * i:104 * (i + 1)],
                 payloads[i],
                 registry
             );
-            emit NewAttestationEvent(e);
-            for (uint j = 0; j < payloads[i].consumers.length; j++) {
-                IAttestationConsumer(payloads[i].consumers[j]).onNewAttestation(e);
+            uint256 totalConsumers = payloads[i].consumers.length;
+            for (uint j = 0; j < totalConsumers; j++) {
+                AttestationEvent memory e = AttestationEvent({
+                    from: from,
+                    data: payloads[i].data[j],
+                    iat: iat
+                });
+                address consumer = payloads[i].consumers[j];
+                emit NewAttestationEvent(consumer, e);
+                IAttestationConsumer(consumer).onNewAttestation(e);
             }
         }
     }
