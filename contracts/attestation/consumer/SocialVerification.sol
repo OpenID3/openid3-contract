@@ -5,8 +5,9 @@ pragma solidity ^0.8.20;
 import "./AttestationConsumer.sol";
 
 contract SocialVerification is AttestationConsumer {
-    error AlreadyVerified();
+    error InvalidVerifiedAddress();
 
+    event NewReferral(uint256 indexed from, address indexed referral);
     event NewVerification(uint256 indexed from, address indexed subject, uint64 iat);
 
     struct VerificationData {
@@ -15,14 +16,24 @@ contract SocialVerification is AttestationConsumer {
     }
 
     mapping(uint256 => VerificationData) _verified;
+    mapping(address => uint256) _totalReferred;
 
     constructor(address allowed) AttestationConsumer(allowed) { }
 
     function _onNewAttestation(AttestationEvent calldata e) internal override {
-        if (_verified[e.from].to != address(0)) {
-            revert AlreadyVerified();
+        (
+            address referral,
+            address to,
+            uint64 iat
+        ) = abi.decode(e.data, (address, address, uint64));
+        if (to == address(0)) {
+            revert InvalidVerifiedAddress();
         }
-        (address to, uint64 iat) = abi.decode(e.data, (address, uint64));
+        // new verified user
+        if (_verified[e.from].to == address(0)) {
+            _totalReferred[referral] += 1;
+            emit NewReferral(e.from, referral);
+        }
         _verified[e.from] = VerificationData({to: to, iat: iat});
         emit NewVerification(e.from, to, e.iat);
     }
@@ -31,5 +42,11 @@ contract SocialVerification is AttestationConsumer {
         uint256 account
     ) external view returns (VerificationData memory) {
         return _verified[account];
+    }
+
+    function getTotalReferred(
+        address account
+    ) external view returns (uint256) {
+        return _totalReferred[account];
     }
 }
