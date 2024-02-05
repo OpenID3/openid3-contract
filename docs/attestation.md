@@ -12,7 +12,7 @@ deploying SocialAttestation (tx: 0x051ea8eef5616dc0194f69fe6d80b4e26c1a9da399195
 
 deploying SocialVoting (tx: 0xb2c4f1c54f38747dac46fef186749b9aff73ca23b4d63e9fb2533e0c7d796262)...: deployed at 0x672D1Da26CF102e1ab620A21bED86daCcE4901E2
 
-deploying SocialVerification (tx: 0x3e4576c558e4a205894ceda01c910a2f4bd1078098004077c0f57fd3df0c3fab)...: deployed at 0xE265c5a6389E47199Fe3D32C54feC8CBB65cd769
+deploying SocialVerification (tx: 0x9bdf25424a1f972e602d194af5752e72f74011032f3669709572bc5243cc7fec)...: deployed at 0x2F35F0a47e93C570884b8d5607b2415b86cf8362
 
 ## ABI
 
@@ -131,6 +131,154 @@ export const socialAttestationAbi = [
       "type": "function"
     }
   ] as const;
+ 
+export const socialVerificationAbi =  [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "allowed",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidVerifiedAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotAllowedAttestationSource",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "from",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "referral",
+          "type": "address"
+        }
+      ],
+      "name": "NewReferral",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "from",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "subject",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "iat",
+          "type": "uint64"
+        }
+      ],
+      "name": "NewVerification",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "getTotalReferred",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "account",
+          "type": "uint256"
+        }
+      ],
+      "name": "getVerifiedAddress",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "linked",
+              "type": "address"
+            },
+            {
+              "internalType": "uint64",
+              "name": "iat",
+              "type": "uint64"
+            }
+          ],
+          "internalType": "struct SocialVerification.VerificationData",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "from",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint64",
+              "name": "iat",
+              "type": "uint64"
+            }
+          ],
+          "internalType": "struct AttestationEvent",
+          "name": "e",
+          "type": "tuple"
+        }
+      ],
+      "name": "onNewAttestation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ] as const;
 ```
 
 ## Structs
@@ -142,11 +290,12 @@ struct AttestationPayload {
 }
 ```
 
-For social verification, the consumer is 0xE265c5a6389E47199Fe3D32C54feC8CBB65cd769, the data is abi encoded
+For social verification, the consumer is 0x2F35F0a47e93C570884b8d5607b2415b86cf8362, the data is abi encoded
 
 ```
 struct VerificationData {
-    address to;
+    address referral;
+    address linked;
     uint64 iat;
 }
 ```
@@ -156,14 +305,18 @@ Example code:
 ```
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
-const socialVerification = "0xE265c5a6389E47199Fe3D32C54feC8CBB65cd769";
+const socialVerification = "0xBb3C4cCa68882C94D62F903f6b5CE67B194b4573";
 
 const encodedData = encodeAbiParameters(
   [
     {
       components: [
         {
-          name: 'to',
+          name: 'referral',
+          type: 'address',
+        },
+        {
+          name: 'linked',
           type: 'address',
         },
         {
@@ -175,7 +328,7 @@ const encodedData = encodeAbiParameters(
       type: 'tuple',
     },
   ],
-  [{to, iat}]
+  [{referral, linked, iat}]
 );
 
 const encodePayload = encodeAbiParameters(

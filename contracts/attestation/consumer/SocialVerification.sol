@@ -11,7 +11,7 @@ contract SocialVerification is AttestationConsumer {
     event NewVerification(uint256 indexed from, address indexed subject, uint64 iat);
 
     struct VerificationData {
-        address to;
+        address linked;
         uint64 iat;
     }
 
@@ -23,19 +23,19 @@ contract SocialVerification is AttestationConsumer {
     function _onNewAttestation(AttestationEvent calldata e) internal override {
         (
             address referral,
-            address to,
+            address linked,
             uint64 iat
         ) = abi.decode(e.data, (address, address, uint64));
-        if (to == address(0)) {
+        if (linked == address(0)) {
             revert InvalidVerifiedAddress();
         }
         // new verified user
-        if (_verified[e.from].to == address(0)) {
+        if (_verified[e.from].linked == address(0)) {
             _totalReferred[referral] += 1;
             emit NewReferral(e.from, referral);
         }
-        _verified[e.from] = VerificationData({to: to, iat: iat});
-        emit NewVerification(e.from, to, e.iat);
+        _verified[e.from] = VerificationData({linked: linked, iat: iat});
+        emit NewVerification(e.from, linked, e.iat);
     }
 
     function getVerifiedAddress(
