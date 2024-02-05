@@ -83,7 +83,21 @@ export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
 }
 
 export async function getSocialVoting(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "SocialVoting");
+  const attestation = await getSocialAttestation(hre);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address"],
+    [await attestation.getAddress()]
+  );
+  return await getDeployedContract(hre, "SocialVoting", args);
+}
+
+export async function getSocialVerification(hre: HardhatRuntimeEnvironment) {
+  const attestation = await getSocialAttestation(hre);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address"],
+    [await attestation.getAddress()]
+  );
+  return await getDeployedContract(hre, "SocialVerification", args);
 }
 
 export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {

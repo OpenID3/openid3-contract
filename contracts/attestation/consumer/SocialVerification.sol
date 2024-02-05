@@ -8,10 +8,10 @@ contract SocialVerification is AttestationConsumer {
     error InvalidVerifiedAddress();
 
     event NewReferral(uint256 indexed from, address indexed referral);
-    event NewVerification(uint256 indexed from, address indexed subject, uint64 iat);
+    event NewVerification(uint256 indexed from, address indexed toVerify, uint64 iat);
 
     struct VerificationData {
-        address linked;
+        address toVerify;
         uint64 iat;
     }
 
@@ -22,20 +22,20 @@ contract SocialVerification is AttestationConsumer {
 
     function _onNewAttestation(AttestationEvent calldata e) internal override {
         (
-            address referral,
-            address linked,
+            address referredBy,
+            address toVerify,
             uint64 iat
         ) = abi.decode(e.data, (address, address, uint64));
-        if (linked == address(0)) {
+        if (toVerify == address(0)) {
             revert InvalidVerifiedAddress();
         }
         // new verified user
-        if (_verified[e.from].linked == address(0)) {
-            _totalReferred[referral] += 1;
-            emit NewReferral(e.from, referral);
+        if (_verified[e.from].toVerify == address(0)) {
+            _totalReferred[referredBy] += 1;
+            emit NewReferral(e.from, referredBy);
         }
-        _verified[e.from] = VerificationData({linked: linked, iat: iat});
-        emit NewVerification(e.from, linked, e.iat);
+        _verified[e.from] = VerificationData({toVerify: toVerify, iat: iat});
+        emit NewVerification(e.from, toVerify, e.iat);
     }
 
     function getVerifiedAddress(
