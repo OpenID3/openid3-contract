@@ -41,9 +41,14 @@ const config: HardhatUserConfig = {
       url: "https://ethereum-sepolia.publicnode.com",
       accounts,
     },
-    mumbai: {
-      chainId: 80001,
-      url: "https://polygon-mumbai-bor.publicnode.com",
+    scroll: {
+      chainId: 534352,
+      url: "https://rpc.scroll.io",
+      accounts,
+    },
+    scroll_sepolia: {
+      chainId: 534351,
+      url: "https://sepolia-rpc.scroll.io	",
       accounts,
     },
     linea: {
