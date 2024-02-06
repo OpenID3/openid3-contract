@@ -43,7 +43,7 @@ library AttestationLib {
         uint32 provider,
         address from
     ) internal pure returns (uint256) {
-        return uint256(provider) << (160 + uint160(from));
+        return (uint256(provider) << 160) + uint160(from);
     }
 
     function decodeSocialAccountId(

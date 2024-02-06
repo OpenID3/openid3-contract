@@ -8,11 +8,11 @@ deploying ZkAttestationVerifier (tx: 0xb06094e54c67d118132ba8e9e27193d2e81037dc7
 
 deploying OpenId3KidRegistry (tx: 0x977f285bd9cc3293ffd404bdffbf863c9b254ee6598fa42373a2dbd11b86d097)...: deployed at 0x311109D10a9BD4D2be1551081b87C56Be144f4Fe
 
-deploying SocialAttestation (tx: 0x051ea8eef5616dc0194f69fe6d80b4e26c1a9da3991959199bf21b6ead63225f)...: deployed at 0x2472cB4b6A82dC944715aA26e024Dd72C7C714ed
+deploying SocialAttestation (tx: 0x26c1af48e8bb6d6857663668a24ca9b4d959a7e4d1b29c20875912449906feee)...: deployed at 0xa1d005269aC68d7a798bC5Bc96428E5313ebF971
 
-deploying SocialVoting (tx: 0xb2c4f1c54f38747dac46fef186749b9aff73ca23b4d63e9fb2533e0c7d796262)...: deployed at 0x672D1Da26CF102e1ab620A21bED86daCcE4901E2
+deploying SocialVoting (tx: 0x772d4b09bda1d3b0a590980cd4076ecb157adb9e9001fdf7f3d87126f0fa4963)...: deployed at 0xA39a38d1Ca1610ACe8b59F9dB99594F2aec943eb
 
-deploying SocialVerification (tx: 0x5d1d0c032b63a2356e7c5f07d9f002d1e1f59df34ebd5b364d3328ab1d64417e)...: deployed at 0x3f224E562652ce2C6001cd14288F2D203dBd3CF2
+deploying SocialVerification (tx: 0x3e78760d8f2ffc57830d12e23503cd41eac458742ebf6c7ee6e597f628ca5094)...: deployed at 0xBc34bF124470988b8d6315184256ddF96bCfF894
 
 ## ABI
 
@@ -290,7 +290,7 @@ struct AttestationPayload {
 }
 ```
 
-For social verification, the consumer is 0x2F35F0a47e93C570884b8d5607b2415b86cf8362, the data is abi encoded
+For social verification, the consumer is 0xBc34bF124470988b8d6315184256ddF96bCfF894, the data is abi encoded
 
 ```
 struct VerificationData {
@@ -305,7 +305,7 @@ Example code:
 ```
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
-const socialVerification = "0x3f224E562652ce2C6001cd14288F2D203dBd3CF2";
+const socialVerification = "0xBc34bF124470988b8d6315184256ddF96bCfF894";
 
 const encodedData = encodeAbiParameters(
   [
