@@ -23,7 +23,7 @@ contract SocialVerification is AttestationConsumer {
     function _onNewAttestation(AttestationEvent calldata e) internal override {
         (
             address referredBy,
-            address toVerify,
+            address toVerify
         ) = abi.decode(e.data, (address, address));
         if (toVerify == address(0)) {
             revert InvalidVerifiedAddress();
