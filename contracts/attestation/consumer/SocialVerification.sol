@@ -24,8 +24,7 @@ contract SocialVerification is AttestationConsumer {
         (
             address referredBy,
             address toVerify,
-            uint64 iat
-        ) = abi.decode(e.data, (address, address, uint64));
+        ) = abi.decode(e.data, (address, address));
         if (toVerify == address(0)) {
             revert InvalidVerifiedAddress();
         }
@@ -34,7 +33,7 @@ contract SocialVerification is AttestationConsumer {
             _totalReferred[referredBy] += 1;
             emit NewReferral(e.from, referredBy);
         }
-        _verified[e.from] = VerificationData({toVerify: toVerify, iat: iat});
+        _verified[e.from] = VerificationData({toVerify: toVerify, iat: e.iat});
         emit NewVerification(e.from, toVerify, e.iat);
     }
 

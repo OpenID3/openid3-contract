@@ -319,10 +319,6 @@ const encodedData = encodeAbiParameters(
           name: 'linked',
           type: 'address',
         },
-        {
-          name: 'iat',
-          type: 'uint64',
-        },
       ],
       name: 'VerificationData',
       type: 'tuple',
