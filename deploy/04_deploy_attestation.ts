@@ -11,10 +11,10 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     }
 
     let owner;
-    if (hre.network.name === "scroll") {
+    const {deployer} = await hre.ethers.getNamedSigners();
+    if (hre.network.name === "scroll" || hre.network.name === "scroll_sepolia") {
         owner = process.env.OPENID3_OWNER;
     } else {
-        const {deployer} = await hre.ethers.getNamedSigners();
         owner = deployer.address;
     }
     const registryArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(

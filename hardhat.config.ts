@@ -8,13 +8,18 @@ import "hardhat-gas-reporter";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 
-const accounts = process.env.HARDHAT_DEPLOYER ?
-  [process.env.HARDHAT_DEPLOYER] :
-  [
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-    "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
-  ];
+import * as dotenv from "dotenv";
+dotenv.config({ path: __dirname + "/.env" });
+
+const deployer =
+  process.env.HARDHAT_LOCAL_DEPLOYER ?? process.env.HARDHAT_DEPLOYER;
+const accounts = deployer
+  ? [deployer]
+  : [
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+    ];
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -29,7 +34,7 @@ const config: HardhatUserConfig = {
           },
         },
       },
-    ]
+    ],
   },
   networks: {
     hardhat: {
@@ -60,7 +65,7 @@ const config: HardhatUserConfig = {
       chainId: 59140,
       url: "https://rpc.goerli.linea.build",
       accounts,
-    }
+    },
   },
   gasReporter: {
     enabled: true,
@@ -89,36 +94,36 @@ const config: HardhatUserConfig = {
         chainId: 11155111,
         urls: {
           apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io"
-        }
+          browserURL: "https://sepolia.etherscan.io",
+        },
       },
       {
         network: "linea",
         chainId: 59144,
         urls: {
           apiURL: "https://api.lineascan.build/api",
-          browserURL: "https://lineascan.build/"
-        }
+          browserURL: "https://lineascan.build/",
+        },
       },
       {
         network: "linea_test",
         chainId: 59140,
         urls: {
           apiURL: "https://api-testnet.lineascan.build/api",
-          browserURL: "https://goerli.lineascan.build/"
-        }
-      }
-    ]
+          browserURL: "https://goerli.lineascan.build/",
+        },
+      },
+    ],
   },
   paths: {
     deploy: "deploy",
     deployments: "deployments",
   },
   typechain: {
-    outDir: 'types',
-    target: 'ethers-v6',
+    outDir: "types",
+    target: "ethers-v6",
     alwaysGenerateOverloads: false,
-    dontOverrideCompile: false
+    dontOverrideCompile: false,
   },
 };
 

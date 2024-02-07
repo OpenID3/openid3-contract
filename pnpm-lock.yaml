@@ -17,6 +17,9 @@ dependencies:
   base64url:
     specifier: ^3.0.1
     version: 3.0.1
+  dotenv:
+    specifier: ^16.4.1
+    version: 16.4.1
   merkle-tree:
     specifier: github:dongshu2013/merkle-tree
     version: github.com/dongshu2013/merkle-tree/ae93fecae29c3d231687a7800c35a3e49052abb0
@@ -10364,7 +10367,6 @@ packages:
     resolution: {tarball: https://codeload.github.com/dongshu2013/merkle-tree/tar.gz/ae93fecae29c3d231687a7800c35a3e49052abb0}
     name: merkle-tree
     version: 1.0.5
-    prepare: true
     requiresBuild: true
     dependencies:
       '@ethersproject/abi': 5.7.0
