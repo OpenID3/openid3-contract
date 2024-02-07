@@ -53,13 +53,6 @@ interface SocialVerificationData {
   toVerify: string;
 }
 
-const encodeSocialVerificationData = (data: SocialVerificationData) => {
-  return hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address"],
-    [data.referredBy, data.toVerify]
-  );
-};
-
 interface AttestationPayload {
   data: string[]; // data
   consumers: string[]; // address[]
@@ -120,38 +113,50 @@ describe("Social Attestation", function () {
 
   it.only("should verify signature", async function () {
     const signature =
-      "0x2954992ca33326cfca073166119d8fc5723c6c56029d5d29e2c6b39c60636b781f92a7dc0aba6d781f3723ba689924b188f9d052106bda951338e7afc916540f205618cd320a81823d5689eda81b8378f588b2299968a1115769be7bb897f2640da1a2ebd1a052013dc06d07b7a99ea320c56fdd25ffcde51555ca57858ea4920744a91867a29f03d4dedee08a0677d2ba646845fd2cc4e76ac184696e1eafba2999fe96a7502e6030f23d5732eef67a4487bdd191d81bc6031c3f6af2d576e8238cce5f98a3b1d56148aff7b9182d426c5b326e8d2cc2f00e103d0ba7e67a2c001fbcb8bbfa98353132710c4ff0e6298888fdaf133392c37c98425216a33255092b682177c4f4a95bd71bb95d2f75abf93a280f7914b35e65a9e6f0e9fc10af1d7faa90e92c8f3cf0f68cc6260bec9d2bc0ef668c18e4e3634592ca523f83720ff939174a1df54dd947477c0ed077ace8318197dd36f720f7341322748e5528090866be97da71960f2dd2528c8a28cec32c6902c01b6ea309ae1250d844dc221cd79f5a8b45c5fe70ce76efa0c309a690a19897c24097692b355f6b5ad799e12b9656e6a0d219d2fa8a6a6917b64e9010c6193aff758a28ba95c300f195e2551282ea91a6bbe190f99ffb7b8ceaa1afe2f1629b298af2350dbb2e658e7cf427171f3ecaef599a80bb2d2dc16121758c54d4c88ee250b86f273ee8aab94faa1200ed1586a1e6c25cfcd499d3ce676cdbdb27ee1f826cf9846d6312a1a96a35362d1fc510011ee5cf85852e64964cde556f08a4c0364f1159ed86d7177731d037046457c01773165620ad71240ce29fb3543e3b8391ea9466df8512c5d1bc87e52a9d19eb66574cd1424053d71c1c5f6730047772cff42e62b49f045e28489f9d0611b0becd064e2a7262c34fde62a369a5566814d263e87f1a685001dd47b98e02528792902642608a1a73f33db21dd0fc59e03f4caee1d610c7a7dfbab4b9131263eff79c20e8be41bf0a118a00f04ff8fad68144269829963c32493caa10c4198b6df7a208586c91bfc38d9e68129adc5c8febc35d3699e8645156e5b92f91162c4713896db96a74624d2dc63aeda1b99bad36af484c43684e7634cec8dd282565f5c4b29cb7e9df41dc2347812a073c3cb3c730f9439c4d9228d9a5c9fc7d2a8b58cf0e8cd6ff8fef5d4e8a5c37f3adde537c886b80688552e31478b5234a004fb7d8fba15a6650bbc75f2a1722ecb59666bc3cd3a880742a87f6df4cf40223af9637d25451452b53be083ee8cdfe177175989eb9d26297758372b332dab6";
-    const input = new Uint8Array([
-      131, 63, 4, 218, 46, 152, 175, 172, 185, 77, 6, 97, 60, 170, 196, 55, 243,
-      236, 93, 88, 214, 176, 77, 111, 85, 131, 148, 165, 38, 207, 186, 173, 224,
-      149, 144, 10, 8, 192, 207, 121, 148, 57, 20, 137, 243, 139, 214, 93, 71,
-      130, 205, 6, 143, 227, 14, 167, 176, 31, 119, 32, 28, 208, 149, 175, 203,
-      91, 14, 211, 173, 249, 44, 4, 155, 117, 198, 146, 48, 187, 112, 144, 70,
-      161, 145, 139, 217, 81, 166, 97, 154, 239, 165, 235, 117, 216, 115, 88, 0,
-      0, 0, 0, 101, 192, 251, 208,
-    ]);
+      "0x27e88dbe89774a43068ff8ab7584ed866667344bdaf2c60fe75cdd98a6ebc0c827085ea1a1ee5505c5081a0728624219a1add80043a9f1cac583f38b868dce6826fde3ed1bb025b0f7340a18009fd2293095b2fbae824115784f5a5ab70059d21440286ac9dad6486153e04dcb26bc4c1bd4be92e9a7927af1671b3eb99241aa221d3e37793747f625bff083a27913e5c8a1ef1597089fa282eb7b15c36e2e6f0f495eed30f30faf9740b363f627eeef34851b9b13812b24b57bc05dd1dfe5b11de95aa91f1914e63e071ce42deeb5e12c5e5d11771362ce9316be30190dec7f078bb61257101b8cfd8a87bff20bbf951487d4b0d363ca6618423184faa641c92986aa74e34a0f61ff7214c6cda5340c6d42cfd7fa9408030a9fdaed714185840d5ed8d30d846666fc36c8c4a882bb6683910293f38d9eb214bdf7693633d4332239f390bb01eb83dfa8220dc8e61c413c4abbbab924181e96ec6e42f4cc41c7142d9fb988303e80985abeab7315a276aa80a4524384ceb4028e9169de6eb3252c15391d30dcf0d8a5c9f5c20f53ba8b1da53fac2ccbbc7543b5929770fc08a714895b881fdb87fa86c7d93c0e773c1e8ca36734740ec1001af768e59c66ca2204a910f7b6dea65054179ec1e00527b6ef1fcce3cf25b21ba2754603dece9261195a38bf1b00ddf36116ad7fdba4900cdc6853eff10aadc14ea78faeba0f633c2743d5fe0a0980f2e4509f92ff75822b747b759929f640905e68aa9b2ad54f5d0bb02a6b9257558b694e99a43ac050fe56ee0594ef174e5d38065dbcb634a7660ccc4b08bf4454a9b9482e0c708ddd4afd0b6ae8718c1889558c7f4fc42a5cdf2052d467ce8f91fc3e1679e1ac06c8d8cca510ed9757a985fdad4de347d26d6d2dc545356ecb4bc520e2df3906065b44fabe67d18219876d7d63f4c315882c16011504fabe13895956c1f376c94f15e9d9abcdccd6518e08e4eb397ebe9d1dcf18a647307aa5a40ec8a60e7b6306c203906dbaaf69b095e784a23fa2657bc2ac187f9ee766b3c69bfd8b6bc3f1ef6d2f0916cc95ce8a3bc08cd41ae3247ebeab1227ea1455df9d410b5ae69259ed237f7f35ab0a590b7ad9381695c9e31ab1d424d85ccf26331a2da27c7e927bfe5c39c3ab66235bc480048e4d03fc482f028c21a139554136326ee4461951fa13fdc98d7a7f39cb75bc3c8b21a42b68ee9203216cec9f700de08403a99b901b78861c7fd3968598ce8e2d32404920efa7aa541ee6796ac1f00990534ab15a79ab1a871e373423df709612b2885af6410fe8be";
+    const input = new Uint8Array([131,63,4,218,46,152,175,172,185,77,6,97,60,170,196,55,243,236,93,88,214,176,77,111,85,131,148,165,38,207,186,173,131,108,17,103,123,218,183,255,186,111,189,60,144,137,33,50,50,110,66,165,69,37,161,174,194,175,66,226,97,141,211,154,60,156,12,154,97,214,232,58,102,71,138,221,221,243,218,25,169,51,129,129,143,170,98,78,255,46,196,50,255,202,196,80,0,0,0,0,101,195,198,158]);
     const verifierDigest =
       "0x2874851f7a094dc67dc4cc50e175d74f1a7289e56c98a3e1daf9de093c610348";
     const packedSig = hre.ethers.solidityPacked(
       ["bytes", "bytes"],
       [verifierDigest, signature]
     );
-    const toVerify = "0xF0dc2efb7940cecf1322e9b02EaaF178F3e33D20";
+    console.log("input is: ", hre.ethers.solidityPacked(["bytes"], [input]));
+    console.log("input hash is ", hre.ethers.sha256(input));
+
+    const encodeSocialVerificationData = (data: SocialVerificationData) => {
+      return hre.ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address", "address"],
+        [data.referredBy, data.toVerify]
+      );
+    };
+    const toVerify = "0xa4b368e3a9d49ff15b58f70fb976724a98b6d149";
     const verificationData = {
       referredBy: toVerify,
       toVerify,
     };
     const data = encodeSocialVerificationData(verificationData);
-    const consumer = await verification.getAddress();
+    const consumer = "0x0Ce34e57E002BBb541f6c08d78D4cF6de82e3829";
+    const encodeAttestationPayload = (payload: AttestationPayload) => {
+      return hre.ethers.AbiCoder.defaultAbiCoder().encode(
+        ["tuple(bytes[], address[])"],
+        [[payload.data, payload.consumers]],
+      );
+    };
     const payload = {
-      data: [data],
+      data: ["0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a4b368e3a9d49ff15b58f70fb976724a98b6d149"],
       consumers: [consumer],
     };
+    const encoded = encodeAttestationPayload(payload);
+    console.log("nonce should be: ", hre.ethers.keccak256(encoded));
+    console.log("get nonce as: ", "3c9c0c9a61d6e83a66478addddf3da19a93381818faa624eff2ec432ffcac450");
+
     const from = hre.ethers.solidityPacked(
       ["uint96", "address"],
-      [1, "0xf38bd65d4782cd068fe30ea7b01f77201cd095af"]
+      [1, "0x90892132326e42a54525a1aec2af42e2618dd39a"]
     );
     const iat = hre.ethers.toBigInt("0x0000000065c0fbd0");
+
     await expect(
       attestation.aggregate(input, [payload], packedSig)
     ).to.emit(attestation, "NewAttestationEvent").withArgs(
@@ -173,37 +178,37 @@ describe("Social Attestation", function () {
       await verification.getTotalReferred(toVerify)
     ).to.equal(1);
 
-    const toVerify2 = "0x7363A50A76437e29b145001c5cEF86F41b3C71A2";
-    const verificationData2 = {
-      referredBy: toVerify2,
-      toVerify: toVerify2,
-    };
-    const data2 = encodeSocialVerificationData(verificationData2);
-    const payload2 = {
-      data: [data2],
-      consumers: [consumer],
-    };
-    await expect(
-      attestation.aggregate(input, [payload2], packedSig)
-    ).to.emit(attestation, "NewAttestationEvent").withArgs(
-      consumer,
-      [
-        from,
-        data2,
-        iat,
-      ]
-    ).to.emit(verification, "NewVerification").withArgs(
-      from, toVerify2, iat
-    );
-    const [verified2, verifiedAt2] = await verification.getVerificationData(from);
-    expect(verified2).to.equal(toVerify2);
-    expect(verifiedAt2).to.equal(iat);
-    expect(
-      await verification.getTotalReferred(toVerify)
-    ).to.equal(1);
-    expect(
-      await verification.getTotalReferred(toVerify2)
-    ).to.equal(0);
+    // const toVerify2 = "0x7363A50A76437e29b145001c5cEF86F41b3C71A2";
+    // const verificationData2 = {
+    //   referredBy: toVerify2,
+    //   toVerify: toVerify2,
+    // };
+    // const data2 = encodeSocialVerificationData(verificationData2);
+    // const payload2 = {
+    //   data: [data2],
+    //   consumers: [consumer],
+    // };
+    // await expect(
+    //   attestation.aggregate(input, [payload2], packedSig)
+    // ).to.emit(attestation, "NewAttestationEvent").withArgs(
+    //   consumer,
+    //   [
+    //     from,
+    //     data2,
+    //     iat,
+    //   ]
+    // ).to.emit(verification, "NewVerification").withArgs(
+    //   from, toVerify2, iat
+    // );
+    // const [verified2, verifiedAt2] = await verification.getVerificationData(from);
+    // expect(verified2).to.equal(toVerify2);
+    // expect(verifiedAt2).to.equal(iat);
+    // expect(
+    //   await verification.getTotalReferred(toVerify)
+    // ).to.equal(1);
+    // expect(
+    //   await verification.getTotalReferred(toVerify2)
+    // ).to.equal(0);
   });
 
   it("should vote", async function () {

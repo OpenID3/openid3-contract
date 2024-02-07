@@ -6,6 +6,7 @@ import "./AttestationConsumer.sol";
 
 contract SocialVerification is AttestationConsumer {
     error InvalidVerifiedAddress();
+    error StaleAttestationEvent();
 
     event NewReferral(uint256 indexed from, address indexed referral);
     event NewVerification(uint256 indexed from, address indexed toVerify, uint64 iat);
@@ -28,8 +29,12 @@ contract SocialVerification is AttestationConsumer {
         if (toVerify == address(0)) {
             revert InvalidVerifiedAddress();
         }
+        VerificationData memory data = getVerificationData(e.from);
+        if (data.iat >= e.iat) {
+            revert StaleAttestationEvent();
+        }
         // new verified user
-        if (_verified[e.from].toVerify == address(0)) {
+        if (data.toVerify == address(0)) {
             _totalReferred[referredBy] += 1;
             emit NewReferral(e.from, referredBy);
         }
@@ -39,7 +44,7 @@ contract SocialVerification is AttestationConsumer {
 
     function getVerificationData(
         uint256 account
-    ) external view returns (VerificationData memory) {
+    ) public view returns (VerificationData memory) {
         return _verified[account];
     }
 
