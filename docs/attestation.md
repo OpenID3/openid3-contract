@@ -2,17 +2,13 @@
 
 ## Contracts
 
-deploying PlonkVerifier (tx: 0x9033bcb4f8846ab52762aee6cef2386b0d38ccbb5418afaae56defe89c620752)...: deployed at 0xd1929562d293529E4d2296f890f98C1594Aa7050
-
-deploying ZkAttestationVerifier (tx: 0xb06094e54c67d118132ba8e9e27193d2e81037dc74a5038743c55ff150d8ecbc)...: deployed at 0x00FC35f80C1D9633436822D1f6FE12db7cDb8817
-
 deploying OpenId3KidRegistry (tx: 0x977f285bd9cc3293ffd404bdffbf863c9b254ee6598fa42373a2dbd11b86d097)...: deployed at 0x311109D10a9BD4D2be1551081b87C56Be144f4Fe
 
-deploying SocialAttestation (tx: 0x26c1af48e8bb6d6857663668a24ca9b4d959a7e4d1b29c20875912449906feee)...: deployed at 0xa1d005269aC68d7a798bC5Bc96428E5313ebF971
+deploying SocialAttestation (tx: 0x373e062f70311249c731b0de1c409cac685da9a2229d28b9b640f64f7e91ef5c)...: deployed at 0x1A130405b73d28DbA4BCBe6882aA1a4217273981
 
-deploying SocialVoting (tx: 0x772d4b09bda1d3b0a590980cd4076ecb157adb9e9001fdf7f3d87126f0fa4963)...: deployed at 0xA39a38d1Ca1610ACe8b59F9dB99594F2aec943eb
+deploying SocialVoting (tx: 0x06e7aacab52aa4941b57b3555f9b2fcdc91d3080eee4389b6bc9bdbffc51af19)...: deployed at 0xbeB17b9bBc16f1d533A76f4DC18Aff40C3378B7a
 
-deploying SocialVerification (tx: 0x3e78760d8f2ffc57830d12e23503cd41eac458742ebf6c7ee6e597f628ca5094)...: deployed at 0xBc34bF124470988b8d6315184256ddF96bCfF894
+deploying SocialVerification (tx: 0xd44646844d955dfa40075615f26043722c39ea77ee219e9ba9ffca819406ad6b)...: deployed at 0x40e9Ba3D55d0700bDD10795123e7750E4dFA01F7
 
 ## ABI
 
@@ -185,7 +181,7 @@ export const socialVerificationAbi =  [
         {
           "indexed": true,
           "internalType": "address",
-          "name": "subject",
+          "name": "toVerify",
           "type": "address"
         },
         {
@@ -225,13 +221,13 @@ export const socialVerificationAbi =  [
           "type": "uint256"
         }
       ],
-      "name": "getVerifiedAddress",
+      "name": "getVerificationData",
       "outputs": [
         {
           "components": [
             {
               "internalType": "address",
-              "name": "linked",
+              "name": "toVerify",
               "type": "address"
             },
             {
@@ -290,7 +286,7 @@ struct AttestationPayload {
 }
 ```
 
-For social verification, the consumer is 0xBc34bF124470988b8d6315184256ddF96bCfF894, the data is abi encoded
+For social verification, the consumer is 0x40e9Ba3D55d0700bDD10795123e7750E4dFA01F7, the data is abi encoded
 
 ```
 struct VerificationData {
@@ -305,7 +301,7 @@ Example code:
 ```
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
-const socialVerification = "0xBc34bF124470988b8d6315184256ddF96bCfF894";
+const socialVerification = "0x40e9Ba3D55d0700bDD10795123e7750E4dFA01F7";
 
 const encodedData = encodeAbiParameters(
   [
