@@ -17,6 +17,10 @@ const epoch = () => {
 };
 
 interface KidData {
+  // 0: invalid
+  // 1: google
+  // 2: twitter
+  // 3: github
   provider: number;
   validUntil: number;
 }
@@ -26,10 +30,15 @@ const kidData1: KidData = {
   provider: 1,
   validUntil: epoch() + 864000000,
 };
-const kid2 = hre.ethers.hexlify(hre.ethers.randomBytes(32));
+const kid2 = "0x781aa49f1e1d2ff7e5dc82282775cee581e11857f79b25c136842d277f7435dc";
 const kidData2: KidData = {
   provider: 2,
-  validUntil: epoch() + 86400,
+  validUntil: epoch() + 864000000,
+};
+const kid3 = "0x1d7e0c1f683d214a08b02f5995a2eb8f7ec5b997246ec2f812cff2badc7c6f7c";
+const kidData3: KidData = {
+  provider: 3,
+  validUntil: epoch() + 864000000,
 };
 
 interface AttestationInput {
@@ -103,6 +112,7 @@ describe("Social Attestation", function () {
     registry = await getOpenId3KidRegistry(hre);
     await registry.setKid(kid1, kidData1);
     await registry.setKid(kid2, kidData2);
+    await registry.setKid(kid3, kidData3);
     attestation = await getSocialAttestation(hre);
     voting = await getSocialVoting(hre);
     verification = await getSocialVerification(hre);
