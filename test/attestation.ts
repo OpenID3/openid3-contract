@@ -1,5 +1,4 @@
-import { expect } from "chai";
-import { Contract, solidityPacked } from "ethers";
+import { Contract } from "ethers";
 import * as hre from "hardhat";
 import {
   getOpenId3KidRegistry,
@@ -7,6 +6,7 @@ import {
   getSocialVerification,
   getSocialVoting,
 } from "../lib/utils";
+import { expect } from "chai";
 
 const keccak256 = (value: string) => {
   return hre.ethers.keccak256(hre.ethers.toUtf8Bytes(value));
@@ -21,7 +21,7 @@ interface KidData {
   validUntil: number;
 }
 
-const kid1 = "0xff20e7fc4aee53281d9619afb5e19ae4914a49488f89052733618750aa9c7508";
+const kid1 = "0x833f04da2e98afacb94d06613caac437f3ec5d58d6b04d6f558394a526cfbaad";
 const kidData1: KidData = {
   provider: 1,
   validUntil: epoch() + 864000000,
@@ -126,15 +126,74 @@ describe("Social Attestation", function () {
       ["bytes", "bytes"],
       [verifierDigest, signature]
     );
+    const toVerify = "0xF0dc2efb7940cecf1322e9b02EaaF178F3e33D20";
     const verificationData = {
-      referredBy: "0xf0dc2efb7940cecf1322e9b02eaaf178f3e33d20",
-      toVerify: "0xf0dc2efb7940cecf1322e9b02eaaf178f3e33d20",
+      referredBy: toVerify,
+      toVerify,
     };
+    const data = encodeSocialVerificationData(verificationData);
+    const consumer = await verification.getAddress();
     const payload = {
-      data: [encodeSocialVerificationData(verificationData)],
-      consumers: [await verification.getAddress()],
+      data: [data],
+      consumers: [consumer],
     };
-    await attestation.aggregate(input, [payload], packedSig);
+    const from = hre.ethers.solidityPacked(
+      ["uint96", "address"],
+      [1, "0xf38bd65d4782cd068fe30ea7b01f77201cd095af"]
+    );
+    const iat = hre.ethers.toBigInt("0x0000000065c0fbd0");
+    await expect(
+      attestation.aggregate(input, [payload], packedSig)
+    ).to.emit(attestation, "NewAttestationEvent").withArgs(
+      consumer,
+      [
+        from,
+        data,
+        iat,
+      ]
+    ).to.emit(verification, "NewVerification").withArgs(
+      from, toVerify, iat
+    ).to.emit(verification, "NewReferral").withArgs(
+      from, toVerify
+    );
+    const [verified, verifiedAt] = await verification.getVerificationData(from);
+    expect(verified).to.equal(toVerify);
+    expect(verifiedAt).to.equal(iat);
+    expect(
+      await verification.getTotalReferred(toVerify)
+    ).to.equal(1);
+
+    const toVerify2 = "0x7363A50A76437e29b145001c5cEF86F41b3C71A2";
+    const verificationData2 = {
+      referredBy: toVerify2,
+      toVerify: toVerify2,
+    };
+    const data2 = encodeSocialVerificationData(verificationData2);
+    const payload2 = {
+      data: [data2],
+      consumers: [consumer],
+    };
+    await expect(
+      attestation.aggregate(input, [payload2], packedSig)
+    ).to.emit(attestation, "NewAttestationEvent").withArgs(
+      consumer,
+      [
+        from,
+        data2,
+        iat,
+      ]
+    ).to.emit(verification, "NewVerification").withArgs(
+      from, toVerify2, iat
+    );
+    const [verified2, verifiedAt2] = await verification.getVerificationData(from);
+    expect(verified2).to.equal(toVerify2);
+    expect(verifiedAt2).to.equal(iat);
+    expect(
+      await verification.getTotalReferred(toVerify)
+    ).to.equal(1);
+    expect(
+      await verification.getTotalReferred(toVerify2)
+    ).to.equal(0);
   });
 
   it("should vote", async function () {

@@ -9,8 +9,6 @@ import "./struct/AttestationLib.sol";
 import "./verifier/ZkAttestationVerifier.sol";
 import "./consumer/IAttestationConsumer.sol";
 
-import "hardhat/console.sol";
-
 contract SocialAttestation is IAttestationAggregator {
     event NewAttestationEvent(address indexed consumer, AttestationEvent e);
 

@@ -10,7 +10,7 @@ abstract contract AttestationConsumer is IAttestationConsumer {
     address immutable allowed;
 
     modifier onlyAllowed() {
-        if (msg.sender == allowed) {
+        if (msg.sender != allowed) {
             revert NotAllowedAttestationSource();
         }
         _;

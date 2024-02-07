@@ -37,7 +37,7 @@ contract SocialVerification is AttestationConsumer {
         emit NewVerification(e.from, toVerify, e.iat);
     }
 
-    function getVerifiedAddress(
+    function getVerificationData(
         uint256 account
     ) external view returns (VerificationData memory) {
         return _verified[account];
