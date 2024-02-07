@@ -10,24 +10,6 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         return;
     }
 
-    const verifier = await deterministicDeploy(
-        hre,
-        "PlonkVerifier",
-        genBytecode(await hre.artifacts.readArtifact("PlonkVerifier"), "0x"),
-        hre.ethers.ZeroHash,
-    );
-
-    const verifierArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address"],
-        [verifier.address],
-    );
-    const zkverifier = await deterministicDeploy(
-        hre,
-        "ZkAttestationVerifier",
-        genBytecode(await getArtifact(hre, "ZkAttestationVerifier"), verifierArgs),
-        hre.ethers.ZeroHash,
-    );
-
     let owner;
     if (hre.network.name === "scroll") {
         owner = process.env.OPENID3_OWNER;
@@ -47,8 +29,8 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     );
 
     const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "address"],
-        [registry.address, zkverifier.address],
+        ["address"],
+        [registry.address],
     );
     const attestation = await deterministicDeploy(
         hre,

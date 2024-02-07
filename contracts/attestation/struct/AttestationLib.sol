@@ -7,7 +7,7 @@ import "../kid/IKidRegistry.sol";
 
 library AttestationLib {
     error AttestationPayloadHashMismatch();
-    error AttestationPayloadsLengthMismatch();
+    error AttestationPayloadDataLengthMismatch();
     error InvalidAccountProvider();
 
     // input is with 108 bytes:
@@ -26,7 +26,7 @@ library AttestationLib {
             revert InvalidAccountProvider();
         }
         if (payload.data.length != payload.consumers.length) {
-            revert AttestationPayloadsLengthMismatch();
+            revert AttestationPayloadDataLengthMismatch();
         }
         // take last 20 bytes of accountIdHash as address for provider
         address account = address(bytes20(input[44:64]));

@@ -46,21 +46,8 @@ export async function getPasskeyAdmin(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "PasskeyAdmin");
 }
 
-export async function getPlonkVerifier(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "PlonkVerifier");
-}
-
 export async function getVeraxModule(hre: HardhatRuntimeEnvironment) {
   return await getDeployedContract(hre, "OpenId3TeeModule");
-}
-
-export async function getZkAttestationVerifier(hre: HardhatRuntimeEnvironment) {
-  const plonk = await getPlonkVerifier(hre);
-  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address"],
-    [await plonk.getAddress()]
-  );
-  return await getDeployedContract(hre, "ZkAttestationVerifier", args);
 }
 
 export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
@@ -73,11 +60,10 @@ export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
 }
 
 export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
-  const verifier = await getZkAttestationVerifier(hre);
   const registry = await getOpenId3KidRegistry(hre);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address"],
-    [await registry.getAddress(), await verifier.getAddress()]
+    ["address"],
+    [await registry.getAddress()]
   );
   return await getDeployedContract(hre, "SocialAttestation", args);
 }

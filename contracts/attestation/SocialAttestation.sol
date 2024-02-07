@@ -6,8 +6,10 @@ import "./IAttestationAggregator.sol";
 
 import "./kid/IKidRegistry.sol";
 import "./struct/AttestationLib.sol";
-import "./verifier/IAttestationVerifier.sol";
+import "./verifier/ZkAttestationVerifier.sol";
 import "./consumer/IAttestationConsumer.sol";
+
+import "hardhat/console.sol";
 
 contract SocialAttestation is IAttestationAggregator {
     event NewAttestationEvent(address indexed consumer, AttestationEvent e);
@@ -15,18 +17,18 @@ contract SocialAttestation is IAttestationAggregator {
     error InvalidAttestationSignature();
     error AttestationPayloadsLengthMismatch();
 
-    IAttestationVerifier immutable verifier;
+    ZkAttestationVerifier immutable verifier;
     IKidRegistry immutable registry;
 
-    constructor(address _registry, address _verifier) {
+    constructor(address _registry) {
         registry = IKidRegistry(_registry);
-        verifier = IAttestationVerifier(_verifier);
+        verifier = new ZkAttestationVerifier();
     }
 
     function aggregate(
-        bytes calldata input,
+        bytes calldata input, // pis
         AttestationPayload[] calldata payloads,
-        bytes calldata signature
+        bytes calldata signature // verifierDigest+proof
     ) external override {
         if (!verifier.verify(input, signature)) {
             revert InvalidAttestationSignature();
