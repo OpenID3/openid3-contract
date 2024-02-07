@@ -87,6 +87,8 @@ const config: HardhatUserConfig = {
       sepolia: process.env.ETHERSCAN_API_KEY!,
       linea: process.env.LINEASCAN_API_KEY!,
       linea_test: process.env.LINEASCAN_API_KEY!,
+      scroll_sepolia: process.env.SCROLLSCAN_API_KEY!,
+      scroll: process.env.SCROLLSCAN_API_KEY!,
     },
     customChains: [
       {
@@ -111,6 +113,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-testnet.lineascan.build/api",
           browserURL: "https://goerli.lineascan.build/",
+        },
+      },
+      {
+        network: "scroll_sepolia",
+        chainId: 534351,
+        urls: {
+          apiURL: "https://api-sepolia.scrollscan.com/api",
+          browserURL: "https://sepolia.scrollscan.com/",
+        },
+      },
+      {
+        network: "scroll",
+        chainId: 534352,
+        urls: {
+          apiURL: "https://api.scrollscan.com/api",
+          browserURL: "https://scrollscan.com/",
         },
       },
     ],
