@@ -3,23 +3,16 @@ import {DeployFunction} from "hardhat-deploy/types";
 import { deterministicDeploy, genBytecode } from "../lib/deployer";
 import { getArtifact } from "../lib/utils";
 
-const allowedNetworks = ["scroll", "scroll_sepolia", "hardhat"];
+const allowedNetworks = ["scroll", "scroll_sepolia", "hardhat", "sepolia"];
 const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     if (!allowedNetworks.includes(hre.network.name)) {
         console.log("skipping attestation deployment on network " + hre.network.name);
         return;
     }
 
-    let owner;
-    const {deployer} = await hre.ethers.getNamedSigners();
-    if (hre.network.name === "scroll" || hre.network.name === "scroll_sepolia") {
-        owner = process.env.OPENID3_OWNER;
-    } else {
-        owner = deployer.address;
-    }
     const registryArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
         ["address"],
-        [owner],
+        [process.env.OPENID3_OWNER],
     );
     const registry = await deterministicDeploy(
         hre,

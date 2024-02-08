@@ -7,7 +7,7 @@ import "./struct/Attestation.sol";
 interface IAttestationAggregator {
     function aggregate(
         bytes calldata input,
-        AttestationPayload[] calldata payloads,
+        bytes[] calldata payloads,
         bytes calldata signature
     ) external;
 }

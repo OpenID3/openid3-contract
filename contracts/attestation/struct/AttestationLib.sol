@@ -10,6 +10,16 @@ library AttestationLib {
     error AttestationPayloadDataLengthMismatch();
     error InvalidAccountProvider();
 
+    function decodePayload(
+        bytes calldata payload
+    ) internal pure returns(AttestationPayload memory) {
+        AttestationPayload memory result = abi.decode(payload, (AttestationPayload));
+        if (result.consumers.length != result.data.length) {
+            revert AttestationPayloadDataLengthMismatch();
+        }
+        return result;
+    }
+
     // input is with 108 bytes:
     //   bytes32: kidHash
     //   bytes32: accountIdHash
@@ -17,7 +27,7 @@ library AttestationLib {
     //   bytes8(uint64): iat
     function validateAndDecodeOneAttestation(
         bytes calldata input,
-        AttestationPayload calldata payload,
+        bytes calldata payload,
         IKidRegistry registry
     ) internal view returns (uint256, uint64) {
         bytes32 kid = bytes32(input[0:32]);
@@ -25,14 +35,11 @@ library AttestationLib {
         if (provider == 0) {
             revert InvalidAccountProvider();
         }
-        if (payload.data.length != payload.consumers.length) {
-            revert AttestationPayloadDataLengthMismatch();
-        }
         // take last 20 bytes of accountIdHash as address for provider
         address account = address(bytes20(input[44:64]));
         uint256 from = encodeSocialAccountId(provider, account);
         bytes32 nonce = bytes32(input[64:96]);
-        if (keccak256(abi.encode(payload)) != nonce) {
+        if (keccak256(payload) != nonce) {
             revert AttestationPayloadHashMismatch();
         }
         uint64 iat = uint64(bytes8(input[96:104]));

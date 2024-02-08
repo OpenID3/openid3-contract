@@ -30,7 +30,8 @@ export async function getInterface(
 export async function getDeployedContract(
   hre: HardhatRuntimeEnvironment,
   contract: string,
-  args?: string
+  args?: string,
+  signer?: HardhatEthersSigner | ethers.Signer
 ) {
   const bytecode = genBytecode(await getArtifact(hre, contract), args ?? "0x");
   const admin = hre.ethers.getCreate2Address(
@@ -38,25 +39,29 @@ export async function getDeployedContract(
     hre.ethers.ZeroHash,
     hre.ethers.keccak256(hre.ethers.getBytes(bytecode))
   );
-  const { deployer } = await hre.ethers.getNamedSigners();
-  return new Contract(admin, await getAbi(hre, contract), deployer);
+  if (signer) {
+    return new Contract(admin, await getAbi(hre, contract), signer);
+  } else {
+    const { deployer } = await hre.ethers.getNamedSigners();
+    return new Contract(admin, await getAbi(hre, contract), deployer);
+  }
 }
 
 export async function getPasskeyAdmin(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "PasskeyAdmin");
+  return getDeployedContract(hre, "PasskeyAdmin");
 }
 
 export async function getVeraxModule(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "OpenId3TeeModule");
+  return getDeployedContract(hre, "OpenId3TeeModule");
 }
 
 export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
-  const { deployer } = await hre.ethers.getNamedSigners();
+  const signer = new ethers.Wallet(process.env.OPENID3_OWNER_PRIV!, hre.ethers.provider);
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address"],
-    [deployer.address]
+    [signer.address]
   );
-  return await getDeployedContract(hre, "OpenId3KidRegistry", args);
+  return getDeployedContract(hre, "OpenId3KidRegistry", args, signer);
 }
 
 export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
@@ -65,7 +70,7 @@ export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
     ["address"],
     [await registry.getAddress()]
   );
-  return await getDeployedContract(hre, "SocialAttestation", args);
+  return getDeployedContract(hre, "SocialAttestation", args);
 }
 
 export async function getSocialVoting(hre: HardhatRuntimeEnvironment) {
@@ -74,7 +79,7 @@ export async function getSocialVoting(hre: HardhatRuntimeEnvironment) {
     ["address"],
     [await attestation.getAddress()]
   );
-  return await getDeployedContract(hre, "SocialVoting", args);
+  return getDeployedContract(hre, "SocialVoting", args);
 }
 
 export async function getSocialVerification(hre: HardhatRuntimeEnvironment) {
@@ -83,11 +88,11 @@ export async function getSocialVerification(hre: HardhatRuntimeEnvironment) {
     ["address"],
     [await attestation.getAddress()]
   );
-  return await getDeployedContract(hre, "SocialVerification", args);
+  return getDeployedContract(hre, "SocialVerification", args);
 }
 
 export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "AccountProxy");
+  return getDeployedContract(hre, "AccountProxy");
 }
 
 export async function getAccountEventIndexer(hre: HardhatRuntimeEnvironment) {
