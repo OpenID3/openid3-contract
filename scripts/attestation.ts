@@ -94,6 +94,7 @@ const main = async function () {
     ],
     consumers: [consumer],
   });
+  console.log("encode payload is: ", payload);
   console.log("nonce should be: ", hre.ethers.keccak256(payload));
   console.log(
     "get nonce as: ",

@@ -2,11 +2,10 @@
 
 ## Contracts
 
-deploying OpenId3KidRegistry (tx: 0x3010644511c8d0d195a642cd29d341ebb928d9dc4c37bf85e245185b5a1656f4)...: deployed at 0x9ae8bDB8361490E20AB274186e343059426B3e65
-deploying SocialAttestation (tx: 0x245b25b999e3beb836c5a40f4e738a64e1b06fe19d1ced50e4ac91b82f8b9ed7)...: deployed at 0x63140654F7eaEE4d591B1601554Be092dB84eAcD
-deploying SocialVoting (tx: 0xd0c7aaaeb176fea76721f083ff0be8e10d27bcad44651fb8b4fc92b362dd2776)...: deployed at 0xcB2d354FA1080DA91a915a7797091204b0c4D121
-deploying SocialVerification (tx: 0x1132aae6154894c16d48655351f1a82b2cb63fc4be362609352dfad4cbf4a329)...: deployed at 0x0Ce34e57E002BBb541f6c08d78D4cF6de82e3829
-
+Reusing OpenId3KidRegistry deployed at 0x9ae8bDB8361490E20AB274186e343059426B3e65
+Reusing SocialAttestation deployed at 0xC6DB97Eb9938Ff912fa7023cbC55303e79897849
+Reusing SocialVoting deployed at 0x3bF5609eD6dCA26fA48981fCFe90813132fBfbd4
+Reusing SocialVerification deployed at 0x3E2Bd53C96cb0e32D1102229940A7144537F1C0E
 ## ABI
 
 ```
@@ -17,11 +16,6 @@ export const socialAttestationAbi = [
           "internalType": "address",
           "name": "_registry",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_verifier",
-          "type": "address"
         }
       ],
       "stateMutability": "nonpayable",
@@ -29,12 +23,12 @@ export const socialAttestationAbi = [
     },
     {
       "inputs": [],
-      "name": "AttestationPayloadHashMismatch",
+      "name": "AttestationPayloadDataLengthMismatch",
       "type": "error"
     },
     {
       "inputs": [],
-      "name": "AttestationPayloadsLengthMismatch",
+      "name": "AttestationPayloadHashMismatch",
       "type": "error"
     },
     {
@@ -96,21 +90,9 @@ export const socialAttestationAbi = [
           "type": "bytes"
         },
         {
-          "components": [
-            {
-              "internalType": "bytes[]",
-              "name": "data",
-              "type": "bytes[]"
-            },
-            {
-              "internalType": "address[]",
-              "name": "consumers",
-              "type": "address[]"
-            }
-          ],
-          "internalType": "struct AttestationPayload[]",
+          "internalType": "bytes[]",
           "name": "payloads",
-          "type": "tuple[]"
+          "type": "bytes[]"
         },
         {
           "internalType": "bytes",
@@ -125,7 +107,7 @@ export const socialAttestationAbi = [
     }
   ] as const;
  
-export const socialVerificationAbi =  [
+export const socialVerificationAbi = [
     {
       "inputs": [
         {
@@ -145,6 +127,11 @@ export const socialVerificationAbi =  [
     {
       "inputs": [],
       "name": "NotAllowedAttestationSource",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "StaleAttestationEvent",
       "type": "error"
     },
     {
@@ -283,7 +270,7 @@ struct AttestationPayload {
 }
 ```
 
-For social verification, the consumer is 0x0Ce34e57E002BBb541f6c08d78D4cF6de82e3829, the data is abi encoded
+For social verification, the consumer is 0x3E2Bd53C96cb0e32D1102229940A7144537F1C0E, the data is abi encoded
 
 ```
 struct VerificationData {
@@ -298,7 +285,7 @@ Example code:
 ```
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 
-const socialVerification = "0x0Ce34e57E002BBb541f6c08d78D4cF6de82e3829";
+const socialVerification = "0x3E2Bd53C96cb0e32D1102229940A7144537F1C0E";
 
 const encodedData = encodeAbiParameters(
   [
