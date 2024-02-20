@@ -46,6 +46,16 @@ const config: HardhatUserConfig = {
       url: "https://ethereum-sepolia.publicnode.com",
       accounts,
     },
+    mumbai: {
+      chainId: 80001,
+      url: "https://polygon-mumbai-bor.publicnode.com",
+      accounts,
+    },
+    polygon: {
+      chainId: 137,
+      url: "https://polygon-bor-rpc.publicnode.com",
+      accounts,
+    },
     scroll: {
       chainId: 534352,
       url: "https://rpc.scroll.io",
@@ -89,6 +99,7 @@ const config: HardhatUserConfig = {
       linea_test: process.env.LINEASCAN_API_KEY!,
       scroll_sepolia: process.env.SCROLLSCAN_API_KEY!,
       scroll: process.env.SCROLLSCAN_API_KEY!,
+      polygon: process.env.POLYGONSCAN_API_KEY!,
     },
     customChains: [
       {
@@ -129,6 +140,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.scrollscan.com/api",
           browserURL: "https://scrollscan.com/",
+        },
+      },
+      {
+        network: "mumbai",
+        chainId: 80001,
+        urls: {
+          apiURL: "https://api-testnet.polygonscan.com/api",
+          browserURL: "https://polygonscan.com/",
+        },
+      },
+      {
+        network: "polygon",
+        chainId: 137,
+        urls: {
+          apiURL: "https://api.polygonscan.com/api",
+          browserURL: "https://polygonscan.com/",
         },
       },
     ],
