@@ -32,6 +32,7 @@
     "base64url": "^3.0.1",
     "dotenv": "^16.4.1",
     "merkle-tree": "github:dongshu2013/merkle-tree",
-    "openzeppelin-contracts": "^4.0.0"
+    "openzeppelin-contracts": "^4.0.0",
+    "viem": "^2.7.11"
   }
 }

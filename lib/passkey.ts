@@ -3,6 +3,8 @@ import { Contract, ethers } from "ethers";
 import { callWithEntryPoint, genUserOp, genUserOpHash } from "./userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { secp256r1 } from "@noble/curves/p256";
+import {encodeAbiParameters} from "viem";
+import { HexString } from "ethers/lib.commonjs/utils/data";
 
 export interface Passkey {
   id: string;
@@ -39,7 +41,7 @@ function buildAdminValidationData(key: Passkey, userOpHash: string) {
   const authData = ethers.solidityPacked(
     ["uint256", "uint256", "uint256"],
     [key.pubKeyX, key.pubKeyY, 0]
-  );
+  ) as `0x${string}`;
   const challenge = ethers.encodeBase64(userOpHash);
   const clientJson = JSON.stringify({
     preField: "preValue",
@@ -70,6 +72,49 @@ function buildAdminValidationData(key: Passkey, userOpHash: string) {
   };
 }
 
+export const adminDataAbi = [
+  {
+    components: [
+      {
+        name: "authData",
+        type: "bytes",
+      },
+      {
+        name: "clientDataJsonPre",
+        type: "string",
+      },
+      {
+        name: "clientDataJsonPost",
+        type: "string",
+      },
+      {
+        components: [
+          {
+            name: "x",
+            type: "uint256",
+          },
+          {
+            name: "y",
+            type: "uint256",
+          },
+        ],
+        name: "pubKey",
+        type: "tuple",
+      },
+      {
+        name: "r",
+        type: "uint256",
+      },
+      {
+        name: "s",
+        type: "uint256",
+      },
+    ],
+    name: "PasskeyValidationData",
+    type: "tuple",
+  },
+] as const;
+
 export async function callFromPasskey(
   sender: string,
   key: Passkey,
@@ -81,19 +126,19 @@ export async function callFromPasskey(
   const userOp = await genUserOp(sender, initCode, callData);
   const userOpHash = await genUserOpHash(userOp);
   const validationData = buildAdminValidationData(key, userOpHash);
-  const signature = ethers.AbiCoder.defaultAbiCoder().encode(
-    ["tuple(bytes, string, string, tuple(uint256, uint256), uint256, uint256)"],
-    [
-      [
-        validationData.authData,
-        validationData.clientDataJsonPre,
-        validationData.clientDataJsonPost,
-        [key.pubKeyX, key.pubKeyY],
-        validationData.r,
-        validationData.s,
-      ],
-    ]
-  );
+  const signature = encodeAbiParameters(adminDataAbi, [
+    {
+      authData: validationData.authData,
+      clientDataJsonPre: validationData.clientDataJsonPre,
+      clientDataJsonPost: validationData.clientDataJsonPost,
+      pubKey: {
+        x: key.pubKeyX,
+        y: key.pubKeyY,
+      },
+      r: validationData.r,
+      s: validationData.s,
+    },
+  ]);
   userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [0, signature]);
   return await callWithEntryPoint(userOp, signer, log ?? false);
 }
