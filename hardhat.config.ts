@@ -100,6 +100,7 @@ const config: HardhatUserConfig = {
       scroll_sepolia: process.env.SCROLLSCAN_API_KEY!,
       scroll: process.env.SCROLLSCAN_API_KEY!,
       polygon: process.env.POLYGONSCAN_API_KEY!,
+      mumbai: process.env.POLYGONSCAN_API_KEY!,
     },
     customChains: [
       {
@@ -147,7 +148,7 @@ const config: HardhatUserConfig = {
         chainId: 80001,
         urls: {
           apiURL: "https://api-testnet.polygonscan.com/api",
-          browserURL: "https://polygonscan.com/",
+          browserURL: "https://mumbai.polygonscan.com/",
         },
       },
       {
