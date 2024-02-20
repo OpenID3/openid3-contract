@@ -1,14 +1,8 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import { deterministicDeploy, genBytecode } from "../lib/deployer";
-import * as fs from "fs";
 import { ethers } from "ethers";
-
-function getSigner(hre: HardhatRuntimeEnvironment) {
-    const env = JSON.parse(
-        fs.readFileSync(process.env.LOCAL_KEYS_PATH!, "utf8"));
-    return new hre.ethers.Wallet(env.openid3, hre.ethers.provider);
-}
+import { getSigner } from "../lib/utils";
 
 const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     if (hre.network.name === "linea" || hre.network.name === "linea_test") {

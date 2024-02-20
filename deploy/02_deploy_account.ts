@@ -1,7 +1,15 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import { deterministicDeploy, genBytecode, getEntryPointAddress } from "../lib/deployer";
-import { getArtifact, getPasskeyAdmin } from "../lib/utils";
+import { getArtifact, getPasskeyAdmin, getSigner } from "../lib/utils";
+
+const getOwner = async function(hre: HardhatRuntimeEnvironment) {
+    if (hre.network.name !== "hardhat") {
+        return "0x8785578E922B01e25c39Fe88a485225c310d97bC";
+    }
+    const {deployer} = await hre.ethers.getNamedSigners();
+    return deployer.address;
+}
 
 const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
     const proxy = await deterministicDeploy(
@@ -38,6 +46,18 @@ const func: DeployFunction = async function(hre: HardhatRuntimeEnvironment) {
         hre,
         "AccountFactory",
         genBytecode(await getArtifact(hre, "AccountFactory"), factoryArgs),
+        hre.ethers.ZeroHash,
+    );
+
+    const entryPoint = getEntryPointAddress();
+    const paymasterArgs = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address", "address"],
+        [entryPoint, process.env.OPENID3_OWNER]
+    );
+    await deterministicDeploy(
+        hre,
+        "SimplePaymaster",
+        genBytecode(await getArtifact(hre, "SimplePaymaster"), paymasterArgs),
         hre.ethers.ZeroHash,
     );
 }

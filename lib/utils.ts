@@ -6,6 +6,7 @@ import {
   genBytecode,
 } from "./deployer";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import * as fs from "fs";
 
 export async function getAbi(hre: HardhatRuntimeEnvironment, contract: string) {
   const artifact = await hre.artifacts.readArtifact(contract);
@@ -62,6 +63,15 @@ export async function getOpenId3KidRegistry(hre: HardhatRuntimeEnvironment) {
     [signer.address]
   );
   return getDeployedContract(hre, "OpenId3KidRegistry", args, signer);
+}
+
+export async function getSimplePaymaster(hre: HardhatRuntimeEnvironment) {
+  const signer = new ethers.Wallet(process.env.OPENID3_OWNER_PRIV!, hre.ethers.provider);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address", "address"],
+    [getEntryPointAddress(), signer.address]
+  );
+  return getDeployedContract(hre, "SimplePaymaster", args, signer);
 }
 
 export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
@@ -144,4 +154,10 @@ export const genOperatorHash = (ops: string[]) => {
     ops.map(() => "address"),
     ops
   );
+}
+
+export function getSigner(hre: HardhatRuntimeEnvironment) {
+  const env = JSON.parse(
+      fs.readFileSync(process.env.LOCAL_KEYS_PATH!, "utf8"));
+  return new hre.ethers.Wallet(env.openid3, hre.ethers.provider);
 }

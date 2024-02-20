@@ -4,10 +4,9 @@
 pragma solidity ^0.8.12;
 
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./AccountFactory.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract SimplePaymaster is BasePaymaster, Ownable {
+contract SimplePaymaster is BasePaymaster {
     using ECDSA for bytes32;
 
     constructor(
@@ -17,7 +16,7 @@ contract SimplePaymaster is BasePaymaster, Ownable {
         _transferOwnership(owner);
     }
 
-    function pack(UserOperation userOp) {
+    function _pack(UserOperation calldata userOp) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -26,7 +25,7 @@ contract SimplePaymaster is BasePaymaster, Ownable {
                     userOp.initCode,
                     userOp.callData,
                     userOp.callGasLimit,
-                    userop.verificationGasLimit,
+                    userOp.verificationGasLimit,
                     userOp.preVerificationGas,
                     userOp.maxFeePerGas,
                     userOp.maxPriorityFeePerGas
@@ -45,23 +44,23 @@ contract SimplePaymaster is BasePaymaster, Ownable {
         returns (bytes memory context, uint256 validationData)
     {
         uint48 validAfter = uint48(
-            bytes6(userOp.paymasterAndData.signature[20:68])
+            bytes6(userOp.paymasterAndData[20:68])
         );
         uint48 validUntil = uint48(
-            bytes6(userOp.paymasterAndData.signature[68:116])
+            bytes6(userOp.paymasterAndData[68:116])
         );
-        bytes memory signature = userOp.paymasterAndData.signature[116:];
+        bytes memory signature = userOp.paymasterAndData[116:];
 
         bytes32 message = keccak256(
             abi.encodePacked(
-                packe(userOp),
-                block.chainId,
+                _pack(userOp),
+                block.chainid,
                 address(this),
                 validAfter,
-                validUtil
+                validUntil
             )
         );
-        bytes signed = message.toEthSignedMessageHash();
+        bytes32 signed = message.toEthSignedMessageHash();
         (address recovered, ECDSA.RecoverError error) = ECDSA.tryRecover(
             signed,
             signature
