@@ -15,8 +15,8 @@ interface AttestationPayload {
 // const verification = "0x78133A0340b3dD68eea0E2258b980e7719B10ce7";
 // const attestation = "0x8E2d598E62435Eda8db693d0557898dC7884bE00";
 
-const verification = "0xf39B9708aa85051C8c6F8D516295f2a977f68CF6";
-const attestation = "0xfc84471aAA09f2796c88E2986f19A650b9CC2a4F";
+const verification = "0x486859108878250F4d1a7e2405B8B6b6C3f3e1ee";
+const attestation = "0xA200Cbd1f65B343248e858CAF0CeA006C4B300d2";
 
 const getVerificationContract = async function () {
   const { deployer } = await hre.ethers.getNamedSigners();
@@ -129,8 +129,8 @@ const main = async function () {
     [1, "0x02954de8445bdbe6956f2d46f537ec6f2a669ae8"]
   );
   const verificationContract = await getVerificationContract();
-  const result = await verificationContract.getVerificationData(from);
-  const totalReffered = await verificationContract.getTotalReferred(toVerify);
+  const result = await verificationContract.getVerificationData(attestation, from);
+  const totalReffered = await verificationContract.getTotalReferred(attestation, toVerify);
   console.log("verified: ", result);
   console.log("totalReffered: ", totalReffered);
 

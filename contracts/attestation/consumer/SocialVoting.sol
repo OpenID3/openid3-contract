@@ -2,17 +2,27 @@
 
 pragma solidity ^0.8.20;
 
-import "./AttestationConsumer.sol";
+import "./IAttestationConsumer.sol";
 
-contract SocialVoting is AttestationConsumer {
+contract SocialVoting is IAttestationConsumer {
+    error UnauthorizedCaller();
+
     event NewVote(uint256 from, address to, uint256 day);
 
     mapping(uint256 => mapping(uint256 => bool)) _voted;
     mapping(address => mapping(uint256 => uint256)) _history;
+    address immutable allowed;
 
-    constructor(address allowed) AttestationConsumer(allowed) { }
+    constructor(address _allowed) {
+        allowed = _allowed;
+    }
 
-    function _onNewAttestation(AttestationEvent calldata e) internal override {
+    function onNewAttestation(
+        AttestationEvent calldata e
+    ) external override {
+        if (msg.sender != allowed) {
+            revert UnauthorizedCaller();
+        }
         uint256 day = e.iat / 86400;
         if (_voted[e.from][day]) {
             return;

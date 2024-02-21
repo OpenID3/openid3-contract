@@ -185,11 +185,11 @@ describe("Social Attestation", function () {
     ).to.emit(verification, "NewReferral").withArgs(
       from, hre.ethers.ZeroAddress
     );
-    const [verified, verifiedAt] = await verification.getVerificationData(from);
+    const [verified, verifiedAt] = await verification.getVerificationData(attestation, from);
     expect(verified).to.equal(toVerify);
     expect(verifiedAt).to.equal(iat);
     expect(
-      await verification.getTotalReferred(toVerify)
+      await verification.getTotalReferred(attestation, toVerify)
     ).to.equal(0);
 
     // const toVerify2 = "0x7363A50A76437e29b145001c5cEF86F41b3C71A2";
