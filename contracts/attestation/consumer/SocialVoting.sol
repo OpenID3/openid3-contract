@@ -7,7 +7,7 @@ import "./IAttestationConsumer.sol";
 contract SocialVoting is IAttestationConsumer {
     error UnauthorizedCaller();
 
-    event NewVote(uint256 from, address to, uint256 day);
+    event NewVote(address indexed attestation, uint256 from, address to, uint256 day);
 
     mapping(address => mapping(uint256 => mapping(uint256 => bool))) _voted;
     mapping(address => mapping(address => mapping(uint256 => uint256))) _history;
@@ -22,13 +22,13 @@ contract SocialVoting is IAttestationConsumer {
             revert UnauthorizedCaller();
         }
         uint256 day = e.iat / 86400;
-        if (_voted[e.from][day]) {
+        if (_voted[msg.sender][e.from][day]) {
             return;
         }
         address to = address(bytes20(e.data));
-        _history[msg.from][to][day] = _history[msg.from][to][day] + 1;
-        _voted[msg.from][e.from][day] = true;
-        emit NewVote(e.from, to, day);
+        _history[msg.sender][to][day] = _history[msg.sender][to][day] + 1;
+        _voted[msg.sender][e.from][day] = true;
+        emit NewVote(msg.sender, e.from, to, day);
     }
 
     function isVoted(
