@@ -8,8 +8,17 @@ contract SocialVerification is IAttestationConsumer {
     error InvalidVerifiedAddress();
     error StaleAttestationEvent();
 
-    event NewReferral(uint256 indexed from, address indexed referral);
-    event NewVerification(uint256 indexed from, address indexed toVerify, uint64 iat);
+    event NewReferral(
+        address indexed attestation,
+        uint256 indexed from,
+        address indexed referral
+    );
+    event NewVerification(
+        address indexed attestation,
+        uint256 indexed from,
+        address indexed toVerify,
+        uint64 iat
+    );
 
     struct VerificationData {
         address toVerify;
@@ -20,10 +29,10 @@ contract SocialVerification is IAttestationConsumer {
     mapping(address => mapping(address => uint256)) _totalReferred;
 
     function onNewAttestation(AttestationEvent calldata e) external override {
-        (
-            address referredBy,
-            address toVerify
-        ) = abi.decode(e.data, (address, address));
+        (address referredBy, address toVerify) = abi.decode(
+            e.data,
+            (address, address)
+        );
         if (toVerify == address(0)) {
             revert InvalidVerifiedAddress();
         }
@@ -34,10 +43,13 @@ contract SocialVerification is IAttestationConsumer {
         // new verified user
         if (data.toVerify == address(0)) {
             _totalReferred[msg.sender][referredBy] += 1;
-            emit NewReferral(e.from, referredBy);
+            emit NewReferral(msg.sender, e.from, referredBy);
         }
-        _verified[msg.sender][e.from] = VerificationData({toVerify: toVerify, iat: e.iat});
-        emit NewVerification(e.from, toVerify, e.iat);
+        _verified[msg.sender][e.from] = VerificationData({
+            toVerify: toVerify,
+            iat: e.iat
+        });
+        emit NewVerification(msg.sender, e.from, toVerify, e.iat);
     }
 
     function getVerificationData(
