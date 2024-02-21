@@ -26,7 +26,7 @@ contract ZkAttestationVerifier is IAttestationVerifier {
         for (uint i = 0; i < total; i++) {
             hashes = bytes.concat(hashes, keccak256(inputs[i * 104: i * 104 + 104]));
         }
-        bytes32 inputHash = total == 1 ? bytes32(hashes) : keccak256(hashes);
+        bytes32 inputHash = keccak256(hashes);
         uint256[] memory publicInputs = new uint256[](2);
         publicInputs[0] = uint256(bytes32(signature[0:32]));
         publicInputs[1] = uint256(inputHash & MASK);
