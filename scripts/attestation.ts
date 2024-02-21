@@ -12,11 +12,8 @@ interface AttestationPayload {
   consumers: string[]; // address[]
 }
 
-// const verification = "0x78133A0340b3dD68eea0E2258b980e7719B10ce7";
-// const attestation = "0x8E2d598E62435Eda8db693d0557898dC7884bE00";
-
-const verification = "0x486859108878250F4d1a7e2405B8B6b6C3f3e1ee";
-const attestation = "0xA200Cbd1f65B343248e858CAF0CeA006C4B300d2";
+const verification = "0x7264E75648E27E2959eC3D245304D8B27Fb96e5f";
+const attestation = "0xB78CE278189593C0902b1f9dA90938f3cFFB1424";
 
 const getVerificationContract = async function () {
   const { deployer } = await hre.ethers.getNamedSigners();
@@ -38,7 +35,6 @@ const getAttestationContract = async function () {
 };
 
 const kid1 =
-//   "0x833f04da2e98afacb94d06613caac437f3ec5d58d6b04d6f558394a526cfbaad";
      "0xff19657c8d6da163c5c8480ce73a0d0efc81fde38900c20c01c0fce5f4e1a5f2";
 const kidData1 = {
   provider: 1,
@@ -123,10 +119,11 @@ const main = async function () {
   const attestation = await getAttestationContract();
   const tx = await attestation.aggregate(input, [payload], packedSig);
   console.log("tx is ", tx);
+  await tx.wait();
 
   const from = hre.ethers.solidityPacked(
     ["uint96", "address"],
-    [1, "0x02954de8445bdbe6956f2d46f537ec6f2a669ae8"]
+    [1, "0x843bac6661885265b89a15dcf12774497964a3b6"]
   );
   const verificationContract = await getVerificationContract();
   const result = await verificationContract.getVerificationData(attestation, from);
