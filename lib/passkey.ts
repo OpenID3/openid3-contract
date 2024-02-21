@@ -4,7 +4,6 @@ import { callWithEntryPoint, genUserOp, genUserOpHash } from "./userop";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { secp256r1 } from "@noble/curves/p256";
 import {encodeAbiParameters} from "viem";
-import { HexString } from "ethers/lib.commonjs/utils/data";
 
 export interface Passkey {
   id: string;

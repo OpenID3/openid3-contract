@@ -1,20 +1,107 @@
 import * as hre from "hardhat";
-import { OpenId3Account__factory } from "../types";
+import { Passkey, buildPasskeyAdminData, genPasskey } from "../lib/passkey";
+import { AddressLike, Contract } from "ethers";
+import {
+  getAccountFactory,
+  getInterface,
+  getOpenId3Account,
+  getPasskeyAdmin,
+} from "../lib/utils";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { callAsOperators, genInitCode } from "../lib/userop";
+import { isContract } from "../lib/deployer";
+import { secp256r1 } from "@noble/curves/p256";
 
-export async function inspect(accountAddr: string) {
+const metadataUrl = "https://example.com/metadata.json";
+const usdt = "0xf321DF3295620b80699f30Be9B97535cf35cAedf";
+const passkey = genPasskey();
+
+export const getPasskey = (id: string, privateKey: string): Passkey => {
+  const privKey = Buffer.from(privateKey, "hex");
+  const pubKey = secp256r1.getPublicKey(privKey);
+  const point = secp256r1.ProjectivePoint.fromPrivateKey(privKey);
+  return { privKey, pubKey, pubKeyX: point.x, pubKeyY: point.y, id };
+};
+
+const deposit = async (from: HardhatEthersSigner, to: AddressLike) => {
+  const tx1 = await from.sendTransaction({
+    to,
+    value: hre.ethers.parseEther("1.0"),
+  });
+  await tx1.wait();
+};
+
+const deployAccount = async (
+  admin: Contract,
+  passkey: Passkey,
+  operators?: string
+) => {
+  const accountIface = await getInterface(hre, "OpenId3Account");
+  const factory = await getAccountFactory(hre);
   const { deployer } = await hre.ethers.getNamedSigners();
+  const adminData = buildPasskeyAdminData(admin, passkey);
+  const accountInitData = accountIface.encodeFunctionData("initialize", [
+    adminData,
+    operators,
+    metadataUrl,
+  ]);
+  const salt = hre.ethers.keccak256(accountInitData);
+  const cloned = await factory.predictClonedAddress(salt);
+  await deposit(deployer, cloned);
+  const tx = await factory.clone(accountInitData);
+  await tx.wait();
+  return getOpenId3Account(hre, cloned, deployer);
+};
+
+export async function deploy() {
+  const { deployer, tester } = await hre.ethers.getNamedSigners();
   console.log("Deployer is: ", deployer.address);
+  console.log("Tester is: ", tester.address);
 
-  const account = OpenId3Account__factory.connect(accountAddr, deployer);
-  const admin = await account.getAdmin();
-  const operator = await account.getOperatorHash();
-  console.log("Admin is: ", admin);
-  console.log("Operator is: ", operator);
-
-  const sig = "0xad613449e654d86878d3ae6666c00c748c3d9eb0ba2c495b83602a535ee783303628159ae32228dd53b514bd837e9ca3fbadef4f155afe88e31ac0b074748a151c";
-  const uoHash = "0xD1B7C980BF81496114B95F8532E04A68847B2D69FB1D1B641020226655A8912A";
-  const verified = hre.ethers.verifyMessage(hre.ethers.getBytes(uoHash), sig);
-  console.log("Verified: ", verified);
+  const operators = hre.ethers.solidityPacked(
+    ["address", "address"],
+    [deployer.address, tester.address]
+  );
+  const admin = await getPasskeyAdmin(hre);
+  const account = await deployAccount(admin, passkey, operators);
+  console.log("Account deployed at: ", account.address);
 }
 
-inspect("0x9c1904e6823c3ee85c6b75d206e42edec02debef");
+export async function transfer(account: string) {
+  const { deployer, tester } = await hre.ethers.getNamedSigners();
+  const accountIface = await getInterface(hre, "OpenId3Account");
+
+  const artifact = await hre.artifacts.readArtifact("ERC20ForTest");
+  const erc20 = new Contract(usdt, artifact.abi, deployer);
+  const erc20Data = erc20.interface.encodeFunctionData("transfer", [
+    tester.address,
+    100,
+  ]);
+  const executeData = accountIface.encodeFunctionData("execute", [
+    usdt,
+    0,
+    erc20Data,
+  ]);
+
+  const admin = await getPasskeyAdmin(hre);
+  const adminData = buildPasskeyAdminData(admin, passkey);
+  const accountInitData = accountIface.encodeFunctionData("initialize", [
+    adminData,
+    [deployer, tester],
+    metadataUrl,
+  ]);
+  const factory = await getAccountFactory(hre);
+  let initCode = "0x";
+  if (await isContract(hre, account)) {
+    initCode = await genInitCode(await factory.getAddress(), accountInitData);
+  }
+  await callAsOperators(
+    account,
+    [deployer, tester],
+    initCode,
+    executeData,
+    deployer
+  );
+}
+
+genPasskey();
