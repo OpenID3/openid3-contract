@@ -15,12 +15,12 @@ contract SocialAttestation is IAttestationAggregator {
     error InvalidAttestationSignature();
     error AttestationPayloadsLengthMismatch();
 
-    ZkAttestationVerifier immutable verifier;
+    IAttestationVerifier immutable verifier;
     IKidRegistry immutable registry;
 
-    constructor(address _registry) {
+    constructor(address _registry, address _verifier) {
         registry = IKidRegistry(_registry);
-        verifier = new ZkAttestationVerifier();
+        verifier = IAttestationVerifier(_verifier);
     }
 
     function aggregate(
