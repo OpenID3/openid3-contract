@@ -74,31 +74,30 @@ export async function getSimplePaymaster(hre: HardhatRuntimeEnvironment) {
   return getDeployedContract(hre, "SimplePaymaster", args, signer);
 }
 
-export async function getSocialAttestation(hre: HardhatRuntimeEnvironment) {
-  const registry = await getOpenId3KidRegistry(hre);
+export async function getEcdsaAttestationVerifier(hre: HardhatRuntimeEnvironment) {
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
     ["address"],
-    [await registry.getAddress()]
+    [process.env.OPENID3_ECDSA_SIGNER]
+  );
+  return getDeployedContract(hre, "Ecdsa", args);
+}
+
+export async function getEcdsaSocialAttestation(hre: HardhatRuntimeEnvironment) {
+  const registry = await getOpenId3KidRegistry(hre);
+  const ecsdaVerifier = await getEcdsaAttestationVerifier(hre);
+  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    ["address", "address"],
+    [await registry.getAddress(), await ecsdaVerifier.getAddress()],
   );
   return getDeployedContract(hre, "SocialAttestation", args);
 }
 
 export async function getSocialVoting(hre: HardhatRuntimeEnvironment) {
-  const attestation = await getSocialAttestation(hre);
-  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address"],
-    [await attestation.getAddress()]
-  );
-  return getDeployedContract(hre, "SocialVoting", args);
+  return getDeployedContract(hre, "SocialVoting");
 }
 
 export async function getSocialVerification(hre: HardhatRuntimeEnvironment) {
-  const attestation = await getSocialAttestation(hre);
-  const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address"],
-    [await attestation.getAddress()]
-  );
-  return getDeployedContract(hre, "SocialVerification", args);
+  return getDeployedContract(hre, "SocialVerification");
 }
 
 export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {

@@ -42,13 +42,13 @@ const kidData1 = {
   validUntil: 2559422614,
 };
 const kid2 =
-  "0x781aa49f1e1d2ff7e5dc82282775cee581e11857f79b25c136842d277f7435dc";
+  "0xc72dda198ccc3944b064a97ab5127aeede3b7f2ce87ada6482cb6de572d37238";
 const kidData2 = {
   provider: 2,
   validUntil: 2559422614,
 };
 const kid3 =
-  "0x1d7e0c1f683d214a08b02f5995a2eb8f7ec5b997246ec2f812cff2badc7c6f7c";
+  "0x6bfc2992da94f2670a21b8344f319683c504b9b01d74305551e2c3d1ab863434";
 const kidData3 = {
   provider: 3,
   validUntil: 2559422614,
