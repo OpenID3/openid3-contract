@@ -13,8 +13,7 @@ interface AttestationPayload {
 }
 
 const verification = "0x7264E75648E27E2959eC3D245304D8B27Fb96e5f";
-const attestation = "0x5154BfAa4827d6e884BFd55497536f0DE12c50c8";
-const plonkVerifier = "0xeb7C2A5674bd11AB10cD07f990B20c686E532707";
+const attestation = "0x513d8b9dd443f7B074E2E8Fcc177Bd62fae274C0";
 
 const getVerificationContract = async function () {
   const { deployer } = await hre.ethers.getNamedSigners();
@@ -69,7 +68,7 @@ export async function setUpKidRegistry(registry: Contract) {
   await registry.setKid(kid3, kidData3);
 }
 
-const main = async function () {
+const zkVerify = async function () {
   // await hre.deployments.fixture(["ATTESTATION"]);
   // const regsitry = await getOpenId3KidRegistry(hre);
   // await setUpKidRegistry(regsitry);
@@ -171,7 +170,7 @@ const main = async function () {
   // ).to.equal(0);
 };
 
-main();
+// zkVerify();
 
 // const getPlonkVerifier = async function () {
 //   const { deployer } = await hre.ethers.getNamedSigners();
@@ -196,3 +195,62 @@ main();
 // };
 
 // verify();
+
+const ecdsaVerify = async function () {
+  // await hre.deployments.fixture(["ATTESTATION"]);
+  // const regsitry = await getOpenId3KidRegistry(hre);
+  // await setUpKidRegistry(regsitry);
+
+  const signature =
+    "0xf72fa9ccbd595326d10b60fba84f51f59f22b1bccdf95382827a4d12438f23f00321ab3fba969a12a7f6e4e1d4f3873de86c5ce9e2330841158899f2d2d96e591b";
+  const input =
+    "0xff19657c8d6da163c5c8480ce73a0d0efc81fde38900c20c01c0fce5f4e1a5f24b00adf07d30475bb31969e9843bac6661885265b89a15dcf12774497964a3b681ce0e5d1819b9ba06d19b711afdc57d0edf9afc1bbaff5ab279aa6d4fe3da0bffd0d66500000000";
+  console.log("input is: ", hre.ethers.solidityPacked(["bytes"], [input]));
+  console.log("input hash is ", hre.ethers.sha256(input));
+  console.log("signature is ", signature);
+
+  const toVerify = hre.ethers.getAddress(
+    "0x92ed18cb1840b5f2f0496b6362b108d84a191eba"
+  );
+  const encodeAttestationPayload = (payload: AttestationPayload) => {
+    return hre.ethers.AbiCoder.defaultAbiCoder().encode(
+      ["tuple(bytes[], address[])"],
+      [[payload.data, payload.consumers]]
+    );
+  };
+  const payload = encodeAttestationPayload({
+    data: [
+      "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000092ed18cb1840b5f2f0496b6362b108d84a191eba",
+    ],
+    consumers: [verification],
+  });
+  console.log("encode payload is: ", payload);
+  console.log("nonce should be: ", hre.ethers.keccak256(payload));
+  console.log(
+    "get nonce as: ",
+    "81ce0e5d1819b9ba06d19b711afdc57d0edf9afc1bbaff5ab279aa6d4fe3da0b"
+  );
+  
+  const attestation = await getAttestationContract();
+  const tx = await attestation.aggregate(input, [payload], signature);
+  console.log("tx is ", tx);
+  await tx.wait();
+
+  const from = hre.ethers.solidityPacked(
+    ["uint96", "address"],
+    [1, "0x843bac6661885265b89a15dcf12774497964a3b6"]
+  );
+  const verificationContract = await getVerificationContract();
+  const result = await verificationContract.getVerificationData(
+    attestation,
+    from
+  );
+  const totalReffered = await verificationContract.getTotalReferred(
+    attestation,
+    toVerify
+  );
+  console.log("verified: ", result);
+  console.log("totalReffered: ", totalReffered);
+};
+
+ecdsaVerify();
