@@ -1,6 +1,6 @@
 import * as hre from "hardhat";
 import { getAbi, getOpenId3KidRegistry } from "../lib/utils";
-import { Contract } from "ethers";
+import { Contract, ZeroAddress } from "ethers";
 
 interface SocialVerificationData {
   referredBy: string;
@@ -12,8 +12,8 @@ interface AttestationPayload {
   consumers: string[]; // address[]
 }
 
-const verification = "0x7264E75648E27E2959eC3D245304D8B27Fb96e5f";
-const attestation = "0x513d8b9dd443f7B074E2E8Fcc177Bd62fae274C0";
+const verification = "0xc646205C3ED668A91093eAe95b127eC9Be1Da39E";
+const attestation = "0x030325803422D0Eac054f82A34CF4a603189CDE2";
 
 const getVerificationContract = async function () {
   const { deployer } = await hre.ethers.getNamedSigners();
@@ -197,9 +197,9 @@ const zkVerify = async function () {
 // verify();
 
 const ecdsaVerify = async function () {
-  // await hre.deployments.fixture(["ATTESTATION"]);
-  // const regsitry = await getOpenId3KidRegistry(hre);
-  // await setUpKidRegistry(regsitry);
+  await hre.deployments.fixture(["ATTESTATION"]);
+  const regsitry = await getOpenId3KidRegistry(hre);
+  await setUpKidRegistry(regsitry);
 
   const signature =
     "0xf72fa9ccbd595326d10b60fba84f51f59f22b1bccdf95382827a4d12438f23f00321ab3fba969a12a7f6e4e1d4f3873de86c5ce9e2330841158899f2d2d96e591b";
@@ -251,6 +251,12 @@ const ecdsaVerify = async function () {
   );
   console.log("verified: ", result);
   console.log("totalReffered: ", totalReffered);
+
+  const totalReffered2 = await verificationContract.getTotalReferred(
+    attestation,
+    ZeroAddress,
+  );
+  console.log("totalReffered2: ", totalReffered2);
 };
 
 ecdsaVerify();
