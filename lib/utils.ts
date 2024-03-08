@@ -104,18 +104,16 @@ export async function getAccountProxy(hre: HardhatRuntimeEnvironment) {
   return getDeployedContract(hre, "AccountProxy");
 }
 
-export async function getAccountEventIndexer(hre: HardhatRuntimeEnvironment) {
-  return await getDeployedContract(hre, "AccountEventIndexer");
+export async function getAccountMetadata(hre: HardhatRuntimeEnvironment) {
+  return await getDeployedContract(hre, "AccountMetadata");
 }
 
 export async function getAccountImpl(hre: HardhatRuntimeEnvironment) {
   const admin = await getPasskeyAdmin(hre);
   const adminAddr = await admin.getAddress();
-  const indexer = await getAccountEventIndexer(hre);
-  const metadataAddr = await indexer.getAddress();
   const args = hre.ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address", "address"],
-    [getEntryPointAddress(), adminAddr, metadataAddr]
+    ["address", "address"],
+    [getEntryPointAddress(), adminAddr]
   );
   return await getDeployedContract(hre, "OpenId3Account", args);
 }
@@ -147,13 +145,6 @@ export const getOpenId3Account = async (
   const artifact = await hre.artifacts.readArtifact("OpenId3Account");
   return new Contract(account, artifact.abi, deployer ?? hre.ethers.provider);
 };
-
-export const genOperatorHash = (ops: string[]) => {
-  return ethers.solidityPackedKeccak256(
-    ops.map(() => "address"),
-    ops
-  );
-}
 
 export function getSigner(hre: HardhatRuntimeEnvironment) {
   const env = JSON.parse(
