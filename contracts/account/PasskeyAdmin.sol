@@ -6,9 +6,8 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import "../lib/Secp256r1Verifier.sol";
-import "./AccountAdminBase.sol";
 
-contract PasskeyAdmin is IERC1271, AccountAdminBase {
+contract PasskeyAdmin is IERC1271 {
     event PasskeySet(
         address indexed account,
         bytes32 indexed keyId,
@@ -33,7 +32,7 @@ contract PasskeyAdmin is IERC1271, AccountAdminBase {
     function setPasskey(
         Passkey calldata pubKey,
         string memory passkeyId
-    ) external onlyAdminMode {
+    ) external {
         bytes32 keyId = _genKeyId(pubKey);
         _passkeys[msg.sender] = keyId;
         emit PasskeySet(msg.sender, keyId, pubKey, passkeyId);

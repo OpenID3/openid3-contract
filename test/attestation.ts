@@ -2,7 +2,7 @@ import { Contract } from "ethers";
 import * as hre from "hardhat";
 import {
   getOpenId3KidRegistry,
-  getSocialAttestation,
+  getEcdsaSocialAttestation,
   getSocialVerification,
   getSocialVoting,
 } from "../lib/utils";
@@ -119,7 +119,7 @@ describe("Social Attestation", function () {
     await hre.deployments.fixture(["ATTESTATION"]);
     registry = await getOpenId3KidRegistry(hre);
     await setUpKidRegistry(registry);
-    attestation = await getSocialAttestation(hre);
+    attestation = await getEcdsaSocialAttestation(hre);
     voting = await getSocialVoting(hre);
     verification = await getSocialVerification(hre);
   });
@@ -191,38 +191,6 @@ describe("Social Attestation", function () {
     expect(
       await verification.getTotalReferred(attestation, toVerify)
     ).to.equal(0);
-
-    // const toVerify2 = "0x7363A50A76437e29b145001c5cEF86F41b3C71A2";
-    // const verificationData2 = {
-    //   referredBy: toVerify2,
-    //   toVerify: toVerify2,
-    // };
-    // const data2 = encodeSocialVerificationData(verificationData2);
-    // const payload2 = {
-    //   data: [data2],
-    //   consumers: [consumer],
-    // };
-    // await expect(
-    //   attestation.aggregate(input, [payload2], packedSig)
-    // ).to.emit(attestation, "NewAttestationEvent").withArgs(
-    //   consumer,
-    //   [
-    //     from,
-    //     data2,
-    //     iat,
-    //   ]
-    // ).to.emit(verification, "NewVerification").withArgs(
-    //   from, toVerify2, iat
-    // );
-    // const [verified2, verifiedAt2] = await verification.getVerificationData(from);
-    // expect(verified2).to.equal(toVerify2);
-    // expect(verifiedAt2).to.equal(iat);
-    // expect(
-    //   await verification.getTotalReferred(toVerify)
-    // ).to.equal(1);
-    // expect(
-    //   await verification.getTotalReferred(toVerify2)
-    // ).to.equal(0);
   });
 
   it("should vote", async function () {

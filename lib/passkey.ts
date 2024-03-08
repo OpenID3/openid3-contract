@@ -31,11 +31,6 @@ export const buildPasskeyAdminCallData = (admin: Contract, key: Passkey) => {
   ]);
 };
 
-export const buildPasskeyAdminData = (admin: Contract, key: Passkey) => {
-  let adminData = buildPasskeyAdminCallData(admin, key);
-  return ethers.solidityPacked(["address", "bytes"], [admin.target, adminData]);
-};
-
 function buildAdminValidationData(key: Passkey, userOpHash: string) {
   const authData = ethers.solidityPacked(
     ["uint256", "uint256", "uint256"],
@@ -138,6 +133,6 @@ export async function callFromPasskey(
       s: validationData.s,
     },
   ]);
-  userOp.signature = ethers.solidityPacked(["uint8", "bytes"], [0, signature]);
+  userOp.signature = signature;
   return await callWithEntryPoint(userOp, signer, log ?? false);
 }

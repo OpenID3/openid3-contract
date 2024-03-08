@@ -12,26 +12,8 @@ contract TestAccount is IOpenId3Account, Ownable {
         _transferOwnership(msg.sender);
     }
 
-    function setMode(uint8 mode) external {
-        _mode = mode;
-    }
-
-    function getMode() external view override returns(uint8) {
-        return _mode;
-    }
-
-    function getAdmin() external view returns(address) {
-        return owner();
-    }
-
-    function getOperatorHash() external view returns(bytes32) {
-        return keccak256(abi.encodePacked(owner()));
-    }
-
     function initialize(
-        bytes calldata /** adminData **/,
-        bytes calldata /* operators */,
-        string calldata /* metadata */
+        bytes calldata /** adminData **/
     ) external pure {
         return;
     }

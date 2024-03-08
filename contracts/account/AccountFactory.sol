@@ -19,12 +19,6 @@ contract AccountFactory {
         accountImpl = _accountImpl;
     }
 
-    // we cannot set operator and metadata in the same transaction
-    // if we don't use operator to derive the salt. This is to
-    // prevent middleman attack. Consider the case where the attacker
-    // knows your admin data, they will be able to deploy your account
-    // with their operator and move the money, since the signature
-    // validation accepts the operator's signature
     function cloneWithAdminOnly(
         bytes memory adminData
     ) external returns (address proxy) {
@@ -32,9 +26,7 @@ contract AccountFactory {
         proxy = Clones.cloneDeterministic(accountProxy, salt);
         bytes memory accountData = abi.encodeWithSelector(
             IOpenId3Account.initialize.selector,
-            adminData,
-            "", // operator data
-            "" // metadata
+            adminData
         );
         IAccountProxy(proxy).initProxy(accountImpl, accountData);
         emit AccountDeployed(proxy);
